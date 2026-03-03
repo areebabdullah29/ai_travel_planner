@@ -1,135 +1,294 @@
-# AI-Powered Travel Buddy
+# TravelBuddy — AI-Powered Travel Planning
 
-Smart Travel Recommendation & Planning Web App using Artificial Intelligence
+A full-stack Final Year Project (FYP) that lets users plan personalised trips through an intelligent AI chat interface. Users describe their destination, budget, and duration in plain language; TravelBuddy generates a complete day-by-day itinerary, restaurant picks, cost breakdown, and practical travel information — all adjusted to their exact budget.
 
 ---
 
-## Project Overview
+## Overview
 
-AI-Powered Travel Buddy is an intelligent web-based travel planning system that generates personalized trips using Artificial Intelligence. The platform analyzes budget, duration, weather, and interests to recommend destinations, itineraries, restaurants, activities, and estimated trip costs.
+TravelBuddy combines a conversational AI interface (powered by Claude) with a Flask/MongoDB backend to deliver a seamless travel planning experience. The AI understands natural language inputs like *"Paris for 7 days with a budget of 600K PKR"*, validates the budget against real destination minimums, and generates a fully detailed trip plan. Trips are saved per user, accessible across devices, and persist even when the backend is offline (localStorage fallback).
 
-**Supervisor:** Amna Bibi (amna.bibi@vu.edu.pk)
+**Supervisor:** Amna Bibi — amna.bibi@vu.edu.pk
+**University:** Virtual University of Pakistan
+
+---
+
+## Key Features
+
+- **Natural language trip planning** — describe your trip in one sentence and the AI extracts destination, duration, and budget automatically
+- **Budget validation** — warns users if their budget is too low for a destination and suggests alternatives or shorter durations
+- **Multi-currency support** — PKR, USD, EUR, GBP, AED, SAR, CAD, AUD, INR, TRY with live conversion
+- **AI-generated itineraries** — day-by-day schedules, restaurant recommendations, cost breakdowns, and practical travel info
+- **User accounts** — register/login with JWT authentication; trips are saved per user
+- **Offline fallback** — full app functionality via localStorage when the backend is unavailable
+- **Search history** — per-user history of previous searches and generated plans
+- **Responsive design** — works on mobile, tablet, and desktop
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend** | React.js, TypeScript, Tailwind CSS, Vite |
-| **Backend** | Python (Flask) |
-| **Database** | MongoDB / MySQL |
-| **AI/ML** | scikit-learn, spaCy, Transformers |
-| **APIs** | Google Maps API, Weather API, Travel Advisor API |
+### Frontend
+
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19 | UI framework |
+| TypeScript | 5.9 | Type safety |
+| Vite | 7 | Build tool and dev server |
+| Tailwind CSS | 4 | Utility-first styling (`@tailwindcss/vite` plugin) |
+| Framer Motion | 12 | Animations and page transitions |
+| React Router DOM | 7 | Client-side routing |
+| Lucide React | 0.575 | Icon library |
+| Anthropic SDK | 0.78 | Claude AI API client |
+| Axios | 1.13 | HTTP client for backend calls |
+| clsx + tailwind-merge | — | Conditional class utilities |
+
+**Key frontend files:**
+
+```
+frontend/src/
+├── pages/
+│   ├── Home.tsx          # Hero with search bar and destination chips
+│   ├── TripPlanner.tsx   # AI chat interface + plan generation
+│   ├── Itinerary.tsx     # Tabbed results (Itinerary / Restaurants / Costs / Info)
+│   ├── Dashboard.tsx     # Saved trips grid + search history
+│   ├── Login.tsx         # Split-screen auth page
+│   └── Register.tsx      # 2-step registration wizard
+├── context/
+│   ├── AuthContext.tsx   # Auth state + login/logout/register
+│   └── TripContext.tsx   # Trip state + localStorage persistence
+├── services/
+│   └── claudeService.ts  # Claude API calls + mock plan generator
+├── components/layout/    # Header, Footer, Layout
+├── data/
+│   └── destinations.json # Destination database (Bali, Bangkok, Tokyo, Singapore, Dubai, London …)
+└── types/index.ts        # Shared TypeScript interfaces
+```
 
 ---
 
-## Development Roadmap
+### Backend
 
-### Phase 1: Frontend Foundation Setup [PENDING]
+| Technology | Version | Purpose |
+|---|---|---|
+| Python | 3.10+ | Runtime |
+| Flask | 3.0 | Web framework |
+| Flask-PyMongo | 2.3 | MongoDB ODM |
+| Flask-JWT-Extended | 4.6 | JWT authentication |
+| Flask-CORS | 4.0 | Cross-origin resource sharing |
+| PyMongo | 4.6 | MongoDB driver |
+| bcrypt | 4.1 | Password hashing |
+| marshmallow | 3.20 | Request validation |
+| spaCy | 3.7 | NLP for query parsing |
+| scikit-learn | 1.3 | ML recommendation engine |
+| NumPy | 1.26 | Numerical operations |
+| python-dotenv | 1.0 | Environment variable management |
 
+**API endpoints:**
 
----
+```
+POST   /api/auth/register       Register a new user
+POST   /api/auth/login          Login and receive JWT tokens
+GET    /api/auth/profile        Get authenticated user profile
+PUT    /api/auth/preferences    Update user travel preferences
+POST   /api/auth/refresh        Refresh access token
 
-### Phase 2: Build Core UI Pages & Components [PENDING]
+GET    /api/trips               Get all trips for current user
+POST   /api/trips               Save a new trip plan
+PATCH  /api/trips/:id/status    Update trip status (planned/ongoing/completed)
+DELETE /api/trips/:id           Delete a trip
 
+GET    /api/destinations        List/search destinations
+GET    /api/destinations/:id    Get destination details
 
----
+GET    /api/search              Search destinations (NLP-powered)
 
-### Phase 3: Backend Setup (Python Flask) [COMPLETED]
+GET    /api/health              Health check
+```
 
-| Step | Task | Status |
-|------|------|--------|
-| 3.1 | Initialize Flask project | Done |
-| 3.2 | Setup Database (MongoDB) | Done |
-| 3.3 | Create Data Models | Done |
-| 3.4 | Build REST APIs | Done |
-| 3.5 | Add JWT Authentication | Done |
-| 3.6 | CORS Configuration | Done |
-| 3.7 | Error Handling | Done |
+**Key backend files:**
 
-**Files Created:**
-- `backend/app/__init__.py` - Flask app factory with extensions
-- `backend/app/config.py` - Configuration classes (dev/prod/test)
-- `backend/app/models/user.py` - User model with bcrypt hashing
-- `backend/app/models/destination.py` - Destination CRUD operations
-- `backend/app/models/trip.py` - Trip management with itineraries
-- `backend/app/routes/auth.py` - Authentication endpoints
-- `backend/app/routes/destinations.py` - Destination CRUD + filters
-- `backend/app/routes/trips.py` - Trip management endpoints
-- `backend/app/routes/search.py` - NLP-powered search
-- `backend/app/services/nlp_parser.py` - Natural language query parser
-- `backend/app/services/recommendation.py` - Content-based recommendations
-- `backend/seed_data.py` - Database seeder script
-
-**API Endpoints:**
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/destinations` | List all destinations (with filters) |
-| GET | `/api/destinations/:id` | Get single destination |
-| POST | `/api/destinations` | Add destination (admin) |
-| PUT | `/api/destinations/:id` | Update destination (admin) |
-| DELETE | `/api/destinations/:id` | Delete destination (admin) |
-| GET | `/api/destinations/filters/regions` | Get all regions |
-| GET | `/api/destinations/filters/types` | Get all travel types |
-| POST | `/api/auth/register` | User registration |
-| POST | `/api/auth/login` | User login (returns JWT) |
-| POST | `/api/auth/refresh` | Refresh access token |
-| GET | `/api/auth/profile` | Get user profile |
-| PUT | `/api/auth/profile` | Update user profile |
-| PUT | `/api/auth/preferences` | Update user preferences |
-| POST | `/api/trips` | Save a trip |
-| GET | `/api/trips` | Get user's saved trips |
-| GET | `/api/trips/:id` | Get single trip details |
-| PUT | `/api/trips/:id` | Update trip |
-| DELETE | `/api/trips/:id` | Delete trip |
-| PUT | `/api/trips/:id/itinerary` | Update trip itinerary |
-| PATCH | `/api/trips/:id/status` | Update trip status |
-| POST | `/api/search` | NLP-powered search with recommendations |
-| GET | `/api/search/quick` | Quick keyword search |
-| GET | `/api/search/similar/:id` | Get similar destinations |
-| GET | `/api/search/popular` | Get popular destinations |
-| POST | `/api/search/parse` | Parse NLP query |
-| POST | `/api/search/budget-estimate` | Get budget estimate |
-| POST | `/api/search/itinerary` | Generate sample itinerary |
+```
+backend/
+├── run.py                  # App entry point
+├── seed_data.py            # Seed MongoDB with sample destinations
+├── requirements.txt        # Python dependencies
+└── app/
+    ├── __init__.py         # App factory (Flask + blueprints)
+    ├── config.py           # Environment configs (dev/prod/test)
+    ├── models/
+    │   ├── user.py         # User model
+    │   ├── trip.py         # Trip model (stores full planData)
+    │   └── destination.py  # Destination model
+    ├── routes/
+    │   ├── auth.py         # Auth routes
+    │   ├── trips.py        # Trip CRUD routes
+    │   ├── destinations.py # Destination routes
+    │   └── search.py       # NLP search route
+    ├── services/
+    │   ├── nlp_parser.py   # Natural language processing
+    │   └── recommendation.py # Destination recommendation logic
+    └── ml/
+        ├── query_parser.py # Query understanding
+        └── recommender.py  # ML-based recommendation engine
+```
 
 ---
 
-### Phase 4: AI/ML Features Implementation [PENDING]
+## Running Locally
 
-| Step | Task | Description |
-|------|------|-------------|
-| 4.1 | NLP Query Parser | Extract destination, budget, duration, activities from natural language |
-| 4.2 | Recommendation Engine | Content-based filtering using destination attributes |
-| 4.3 | Collaborative Filtering | Recommend based on similar user preferences |
-| 4.4 | Budget Estimator | Calculate travel + hotel + meals + activities |
-| 4.5 | Itinerary Generator | Create day-by-day plans based on duration & interests |
-| 4.6 | Cold Start Handling | Popular destinations for new users |
+### Prerequisites
 
-**NLP Query Examples:**
-
-| Input | Extracted Parameters |
-|-------|---------------------|
-| "Plan a 3-day trip to northern Pakistan under 25,000 PKR" | `{days: 3, region: "northern", budget: 25000}` |
-| "Family vacation to Murree" | `{type: "Family", destination: "Murree"}` |
-| "Adventure trip with hiking and camping" | `{type: "Adventure", activities: ["hiking", "camping"]}` |
+- **Node.js** 18+ and npm
+- **Python** 3.10+
+- **MongoDB** running locally on `mongodb://localhost:27017` (or a MongoDB Atlas URI)
+- An **Anthropic API key** (get one at [console.anthropic.com](https://console.anthropic.com))
 
 ---
 
-### Phase 5: API Integration & Polish [PENDING]
+### 1. Clone the repository
 
-| Step | Task | Description |
-|------|------|-------------|
-| 5.1 | Weather API Integration | Real-time weather for destinations |
-| 5.2 | Google Maps Integration | Display locations, routes, distances |
-| 5.3 | Connect Frontend to Backend | Axios services for all API calls |
-| 5.4 | Authentication Context | Global auth state management |
-| 5.5 | Error Handling | Toast notifications, error boundaries |
-| 5.6 | Responsive Design Polish | Mobile, tablet, desktop testing |
-| 5.7 | Performance Optimization | Lazy loading, code splitting |
-| 5.8 | Testing | Unit tests, integration tests |
-| 5.9 | Deployment | Deploy frontend and backend |
+```bash
+git clone <repository-url>
+cd areeba-fyp
+```
+
+---
+
+### 2. Backend setup
+
+```bash
+cd backend
+```
+
+**Create and activate a virtual environment:**
+
+```bash
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS / Linux
+python -m venv venv
+source venv/bin/activate
+```
+
+**Install dependencies:**
+
+```bash
+pip install -r requirements.txt
+```
+
+**Download the spaCy language model:**
+
+```bash
+python -m spacy download en_core_web_sm
+```
+
+**Create the environment file:**
+
+```bash
+# Create backend/.env
+```
+
+Add the following to `backend/.env`:
+
+```env
+FLASK_ENV=development
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-here
+MONGO_URI=mongodb://localhost:27017/travel_buddy
+CORS_ORIGINS=http://localhost:5173
+```
+
+**(Optional) Seed the database with sample destinations:**
+
+```bash
+python seed_data.py
+```
+
+**Start the backend server:**
+
+```bash
+python run.py
+```
+
+The API will be available at `http://localhost:5000`. Test it:
+
+```
+GET http://localhost:5000/api/health
+```
+
+---
+
+### 3. Frontend setup
+
+Open a new terminal:
+
+```bash
+cd frontend
+```
+
+**Install dependencies:**
+
+```bash
+npm install
+```
+
+**Create the environment file:**
+
+```bash
+# Create frontend/.env
+```
+
+Add the following to `frontend/.env`:
+
+```env
+VITE_ANTHROPIC_API_KEY=sk-ant-your-key-here
+VITE_API_URL=http://localhost:5000
+```
+
+> **Note:** `VITE_ANTHROPIC_API_KEY` enables live Claude AI responses. Without it, the app uses a built-in smart mock response system — all features still work.
+
+**Start the development server:**
+
+```bash
+npm run dev
+```
+
+The app will be available at `http://localhost:5173`.
+
+---
+
+### 4. Build for production
+
+```bash
+cd frontend
+npm run build
+```
+
+The production build will be output to `frontend/dist/`.
+
+---
+
+## Environment Variables Reference
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `VITE_ANTHROPIC_API_KEY` | Optional | Claude API key for live AI responses |
+| `VITE_API_URL` | Optional | Backend URL (defaults to `http://localhost:5000`) |
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | Yes | MongoDB connection string |
+| `SECRET_KEY` | Yes | Flask secret key |
+| `JWT_SECRET_KEY` | Yes | JWT signing secret |
+| `FLASK_ENV` | No | `development` or `production` (default: `development`) |
+| `CORS_ORIGINS` | No | Allowed frontend origins (default: `http://localhost:5173`) |
 
 ---
 
@@ -137,236 +296,22 @@ AI-Powered Travel Buddy is an intelligent web-based travel planning system that 
 
 ```
 areeba-fyp/
-├── frontend/                    # React Frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/
-│   │   │   │   ├── Header.tsx
-│   │   │   │   └── Footer.tsx
-│   │   │   ├── DestinationCard.tsx
-│   │   │   ├── SearchBar.tsx
-│   │   │   ├── WeatherWidget.tsx
-│   │   │   └── BudgetCalculator.tsx
-│   │   ├── pages/
-│   │   │   ├── Home.tsx
-│   │   │   ├── Login.tsx
-│   │   │   ├── Register.tsx
-│   │   │   ├── Profile.tsx
-│   │   │   ├── Destinations.tsx
-│   │   │   ├── DestinationDetail.tsx
-│   │   │   ├── TripPlanner.tsx
-│   │   │   └── AdminDashboard.tsx
-│   │   ├── services/
-│   │   │   ├── api.ts
-│   │   │   ├── authService.ts
-│   │   │   └── destinationService.ts
-│   │   ├── context/
-│   │   │   └── AuthContext.tsx
-│   │   ├── hooks/
-│   │   │   └── useAuth.ts
-│   │   ├── types/
-│   │   │   └── index.ts
-│   │   ├── data/
-│   │   │   └── destinations.json
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── package.json
-│   ├── tailwind.config.js
-│   └── vite.config.ts
-│
-├── backend/                     # Flask Backend (To be created)
+├── backend/                 # Flask API
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── config.py
-│   │   ├── routes/
-│   │   │   ├── auth.py
-│   │   │   ├── destinations.py
-│   │   │   ├── trips.py
-│   │   │   └── search.py
-│   │   ├── models/
-│   │   │   ├── user.py
-│   │   │   ├── destination.py
-│   │   │   └── trip.py
-│   │   ├── services/
-│   │   │   ├── recommendation.py
-│   │   │   └── nlp_parser.py
-│   │   └── ml/
-│   │       ├── query_parser.py
-│   │       └── recommender.py
+│   │   ├── models/          # MongoDB models (User, Trip, Destination)
+│   │   ├── routes/          # API route blueprints
+│   │   ├── services/        # Business logic + NLP
+│   │   └── ml/              # Recommendation engine
 │   ├── requirements.txt
 │   └── run.py
-│
-├── README.md                    # This file
-├── task.md                      # Project requirements
-└── prototype-assignment.md      # Assignment details
+└── frontend/                # React app
+    ├── src/
+    │   ├── components/      # Reusable UI components
+    │   ├── context/         # React context (Auth, Trip state)
+    │   ├── data/            # destinations.json (static destination DB)
+    │   ├── pages/           # Route-level page components
+    │   ├── services/        # API and Claude service calls
+    │   └── types/           # TypeScript type definitions
+    ├── package.json
+    └── vite.config.ts
 ```
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- Python 3.9+
-- MongoDB or MySQL
-
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend runs at: http://localhost:5173
-
-### Backend Setup (Phase 3)
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python run.py
-```
-
-Backend runs at: http://localhost:5000
-
----
-
-## Features Checklist
-
-### Home Page
-- [x] Natural language search bar
-- [x] Quick suggestion chips
-- [x] Featured destinations grid
-- [ ] Weather highlights
-- [ ] Personalized greetings (after login)
-
-### User Management
-- [x] Registration form UI
-- [x] Login form UI
-- [x] Profile preferences UI
-- [ ] Google OAuth integration
-- [ ] JWT authentication
-
-### Destinations
-- [x] Destination cards with images
-- [x] Filter by type, region, budget
-- [x] Search functionality
-- [ ] Destination detail page
-- [ ] User reviews
-
-### Trip Planning
-- [x] NLP query parsing (basic)
-- [x] Destination recommendations
-- [x] Budget estimation
-- [x] Sample itinerary display
-- [ ] Save trips
-- [ ] Edit itinerary
-- [ ] Share trips
-
-### AI/ML Features
-- [x] Basic query parsing (frontend)
-- [ ] Advanced NLP with spaCy/BERT
-- [ ] Content-based recommendations
-- [ ] Collaborative filtering
-- [ ] Smart budget optimization
-
-### Admin Dashboard
-- [ ] Manage destinations
-- [ ] View analytics
-- [ ] Update pricing
-- [ ] Manage users
-
----
-
-## Database Schema
-
-### Users Collection/Table
-```json
-{
-  "_id": "ObjectId",
-  "name": "string",
-  "email": "string",
-  "password": "hashed_string",
-  "preferences": {
-    "budgetRange": { "min": 10000, "max": 50000 },
-    "travelStyles": ["Adventure", "Family"],
-    "preferredRegions": ["Gilgit Baltistan"],
-    "tripDuration": 5
-  },
-  "createdAt": "datetime"
-}
-```
-
-### Destinations Collection/Table
-```json
-{
-  "_id": "ObjectId",
-  "name": "Hunza Valley",
-  "type": "Adventure",
-  "region": "Gilgit Baltistan",
-  "cost": 25000,
-  "weather": "Cool",
-  "bestSeason": "Summer",
-  "activities": ["Hiking", "Sightseeing"],
-  "safetyRating": 5,
-  "userRating": 4.8,
-  "image": "url",
-  "description": "string"
-}
-```
-
-### Trips Collection/Table
-```json
-{
-  "_id": "ObjectId",
-  "userId": "ObjectId",
-  "destinationId": "ObjectId",
-  "startDate": "date",
-  "endDate": "date",
-  "budget": 25000,
-  "itinerary": [
-    {
-      "day": 1,
-      "activities": [
-        { "name": "Arrival", "time": "10:00", "cost": 0 }
-      ]
-    }
-  ],
-  "status": "planned",
-  "createdAt": "datetime"
-}
-```
-
----
-
-## Current Progress
-
-| Phase | Status | Progress |
-|-------|--------|----------|
-| Phase 1: Frontend Foundation | Completed | 100% |
-| Phase 2: Core UI Components | Not Started | 0% |
-| Phase 3: Backend Setup | Not Started | 0% |
-| Phase 4: AI/ML Features | Not Started | 0% |
-| Phase 5: Integration & Polish | Not Started | 0% |
-
-**Overall Progress: ~20%**
-
----
-
-## Next Steps
-
-1. Continue with **Phase 2** - Build remaining UI components
-2. Set up **Flask backend** with database
-3. Implement **authentication** flow
-4. Add **NLP query parsing** on backend
-5. Integrate **external APIs** (Weather, Maps)
-
----
-
-## License
-
-This project is developed for educational purposes as part of Virtual University coursework.

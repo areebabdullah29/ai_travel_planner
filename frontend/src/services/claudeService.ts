@@ -319,24 +319,51 @@ export function generateMockPlan(preferences: TripPreferences, destinationName?:
   const found = findDestination(destinationName ?? '')
   const dest = found ?? (destinationName?.trim() ? buildGenericDestination(destinationName, preferences) : destinations[0])
 
-  // Scale base cost: destination's 5-day base → user's duration
-  const basePKR = dest.baseCostPKR
-  const totalPKR = Math.round(basePKR * (days / 5))
-  const totalCost = preferences.budget ?? pkrToDisplay(totalPKR, currency)
+  // Currency → PKR conversion rates
+  const toPKR: Record<string, number> = {
+    PKR: 1, USD: 280, EUR: 305, GBP: 355,
+    AED: 76, SAR: 75, CAD: 207, AUD: 180, INR: 1 / 3.4, TRY: 9,
+  }
 
-  // Pick a hotel (prefer mid-range)
-  const hotel = dest.hotels[1] ?? dest.hotels[0]
-  const hotelNightsPKR = hotel.pricePerNightPKR * days
-  const hotelCost = pkrToDisplay(hotelNightsPKR, currency)
+  // Use user's stated budget as the single source of truth for ALL cost calculations.
+  // If no budget provided, fall back to destination's base cost scaled by duration.
+  const destBasePKR = Math.round(dest.baseCostPKR * (days / 5))
+  const userBudgetPKR = preferences.budget
+    ? Math.round(preferences.budget * (toPKR[currency] ?? 1))
+    : destBasePKR
+
+  // totalCost shown in the UI = user's exact stated amount (no rounding surprise)
+  const totalCost = preferences.budget ?? pkrToDisplay(destBasePKR, currency)
+
+  // Pick hotel tier based on per-day budget
+  const perDayPKR = userBudgetPKR / days
+  const hotel = perDayPKR > 30000
+    ? (dest.hotels[0] ?? dest.hotels[1])          // luxury
+    : perDayPKR > 12000
+      ? (dest.hotels[1] ?? dest.hotels[0])         // mid-range
+      : (dest.hotels[2] ?? dest.hotels[1] ?? dest.hotels[0]) // budget
+
+  // Budget allocation percentages (must sum to 1.0)
+  const PCT = { flights: 0.30, accommodation: 0.30, food: 0.18, activities: 0.12, transport: 0.06, misc: 0.04 }
+
+  const hotelCostPKR   = Math.round(userBudgetPKR * PCT.accommodation)
+  const flightCostPKR  = Math.round(userBudgetPKR * PCT.flights)
+  const foodCostPKR    = Math.round(userBudgetPKR * PCT.food)
+  const activCostPKR   = Math.round(userBudgetPKR * PCT.activities)
+  const transportPKR   = Math.round(userBudgetPKR * PCT.transport)
+  const miscPKR        = Math.round(userBudgetPKR * PCT.misc)
+
+  // Scale activity costs proportionally to the user's budget
+  const budgetRatio = userBudgetPKR / (destBasePKR || 1)
 
   // Distribute activities across days (cycle through the list)
   const actPool = dest.activities
   const itinerary = Array.from({ length: days }, (_, i) => {
     const morningAct = actPool[(i * 2) % actPool.length]
     const eveningAct = actPool[(i * 2 + 1) % actPool.length]
-    const dayBudgetPKR = totalPKR / days
-    const morningCostDisplay = pkrToDisplay(morningAct.costPKR, currency)
-    const eveningCostDisplay = pkrToDisplay(eveningAct.costPKR, currency)
+    const morningCostDisplay = pkrToDisplay(Math.round(morningAct.costPKR * Math.min(budgetRatio, 3)), currency)
+    const eveningCostDisplay = pkrToDisplay(Math.round(eveningAct.costPKR * Math.min(budgetRatio, 3)), currency)
+    const dayBudgetDisplay   = pkrToDisplay(Math.round(userBudgetPKR / days), currency)
 
     return {
       day: i + 1,
@@ -365,26 +392,9 @@ export function generateMockPlan(preferences: TripPreferences, destinationName?:
         dinner: dest.restaurants[i % dest.restaurants.length]?.name ?? 'Local restaurant',
       },
       accommodation: `${hotel.name} (${hotel.stars}★)`,
-      estimatedCost: pkrToDisplay(dayBudgetPKR, currency),
+      estimatedCost: dayBudgetDisplay,
     }
   })
-
-  // Cost breakdown
-  const flightCost   = pkrToDisplay(Math.round(totalPKR * 0.30), currency)
-  const foodCost     = pkrToDisplay(Math.round(totalPKR * 0.18), currency)
-  const activCost    = pkrToDisplay(Math.round(totalPKR * 0.15), currency)
-  const transportCost = pkrToDisplay(Math.round(totalPKR * 0.07), currency)
-  const miscCost     = pkrToDisplay(Math.round(totalPKR * 0.05), currency)
-
-  // Map restaurants to display format
-  const restaurants = dest.restaurants.map(r => ({
-    name: r.name,
-    cuisine: r.cuisine,
-    priceRange: r.priceRange === 'Budget' ? '$' : r.priceRange === 'Mid-range' ? '$$' : '$$$',
-    rating: r.rating,
-    specialty: r.specialty,
-    location: r.location,
-  }))
 
   return {
     id: crypto.randomUUID(),
@@ -396,7 +406,14 @@ export function generateMockPlan(preferences: TripPreferences, destinationName?:
     highlights: dest.highlights,
     bestTime: dest.best_season,
     itinerary,
-    restaurants,
+    restaurants: dest.restaurants.map(r => ({
+      name: r.name,
+      cuisine: r.cuisine,
+      priceRange: r.priceRange === 'Budget' ? '$' : r.priceRange === 'Mid-range' ? '$$' : '$$$',
+      rating: r.rating,
+      specialty: r.specialty,
+      location: r.location,
+    })),
     practicalInfo: {
       language: dest.language,
       timezone: dest.timezone,
@@ -405,12 +422,12 @@ export function generateMockPlan(preferences: TripPreferences, destinationName?:
       transportation: dest.transportation,
     },
     costBreakdown: {
-      flights: flightCost,
-      accommodation: hotelCost,
-      food: foodCost,
-      activities: activCost,
-      transport: transportCost,
-      miscellaneous: miscCost,
+      flights:       pkrToDisplay(flightCostPKR, currency),
+      accommodation: pkrToDisplay(hotelCostPKR, currency),
+      food:          pkrToDisplay(foodCostPKR, currency),
+      activities:    pkrToDisplay(activCostPKR, currency),
+      transport:     pkrToDisplay(transportPKR, currency),
+      miscellaneous: pkrToDisplay(miscPKR, currency),
     },
     createdAt: new Date().toISOString(),
     preferences,

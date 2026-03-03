@@ -230,8 +230,8 @@ export default function Itinerary() {
                 {duration} days
               </span>
               <span className="flex items-center gap-2">
-                <DollarSign size={15} className="text-[#e91e8c]" />
-                {currency} {totalCost.toLocaleString()} total
+                <span className="text-[#e91e8c] font-semibold text-sm">{currency}</span>
+                {totalCost.toLocaleString()} total
               </span>
               <span className="flex items-center gap-2">
                 <Star size={15} className="text-[#ffd166]" fill="#ffd166" />
@@ -371,7 +371,7 @@ export default function Itinerary() {
                                     </span>
                                     {activity.cost > 0 && (
                                       <span className="flex items-center gap-1 text-white/30 text-xs">
-                                        <DollarSign size={10} />{currency} {activity.cost}
+                                        {currency} {activity.cost}
                                       </span>
                                     )}
                                   </div>

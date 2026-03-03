@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import {
   Sparkles, MapPin, DollarSign, Clock, CloudSun,
   Utensils, Compass, ArrowRight,
-  Star, Globe, Zap, Shield, Search, Send
+  Star, Globe, Zap, Search, Send
 } from 'lucide-react'
 
 const fadeUp = {
@@ -465,9 +465,6 @@ export default function Home() {
 
             <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e91e8c]/15 text-[#e91e8c] text-xs font-semibold mb-6">
-                  <Shield size={12} /> Claude AI Integration
-                </div>
                 <h2 className="font-display text-4xl font-bold text-white mb-5 leading-tight">
                   Conversational travel planning — just chat
                 </h2>

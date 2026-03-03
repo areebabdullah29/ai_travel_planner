@@ -116,60 +116,206 @@ export default function TripPlanner() {
     const cur = selectedCurrency
     const defaultBudget = DEFAULT_BUDGETS[cur] ?? 1500
 
-    // Helper: pick destination from current message keywords, also updating detectedDestinationRef
-    const setDest = (d: { dest: string; style: string; interests: string[] }) => {
-      detectedDestinationRef.current = d
-      return d
+    // ── Shared types and helpers (declared first so smart shortcut can use them) ──
+    // minPerDayPKR = minimum recommended daily budget in PKR for a comfortable trip (optional, defaults to 20000)
+    type DestInfo = { dest: string; style: string; interests: string[]; minPerDayPKR?: number }
+    const setDest = (d: DestInfo) => { detectedDestinationRef.current = d; return d }
+
+    // ── Extract duration from message ─────────────────────────────────────────
+    const wkMatch = userMessage.match(/\b(\d+)\s*week/i)
+    const dayMatch = userMessage.match(/\b(\d+)\s*(?:day|days|night|nights)\b/i)
+    const extractedDays = wkMatch ? +wkMatch[1] * 7 : dayMatch ? +dayMatch[1] : null
+
+    // ── Extract budget from message ───────────────────────────────────────────
+    const cleanText = userMessage.replace(/,/g, '')
+    const kBudget = cleanText.match(/\b(\d+(?:\.\d+)?)\s*[kK]\b/)
+    const lacBudget = cleanText.match(/\b(\d+(?:\.\d+)?)\s*(?:lac|lakh|lacs|lakhs)\b/i)
+    const curBudget = cleanText.match(/\b(\d{3,})\s*(?:pkr|usd|gbp|eur|aed|sar|inr|cad|aud|try)\b/i)
+    const wordBudget = cleanText.match(/budget\s*(?:of|is|:)?\s*(\d{3,})/i)
+    const extractedBudget = kBudget ? Math.round(+kBudget[1] * 1000)
+      : lacBudget ? Math.round(+lacBudget[1] * 100000)
+      : curBudget ? +curBudget[1]
+      : wordBudget ? +wordBudget[1]
+      : null
+
+    // ── Inline destination detection ──────────────────────────────────────────
+    const DEST_MAP: Array<{ kw: string[]; info: DestInfo }> = [
+      { kw: ['paris', 'france'],                                                              info: { dest: 'Paris',            style: 'Romantic',   interests: ['culture', 'food', 'art'],             minPerDayPKR: 45000 } },
+      { kw: ['thailand', 'bangkok', 'phuket', 'chiang mai', 'pattaya', 'koh samui', 'krabi'],info: { dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'],          minPerDayPKR: 20000 } },
+      { kw: ['japan', 'tokyo', 'kyoto', 'osaka', 'hiroshima'],                               info: { dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'],       minPerDayPKR: 45000 } },
+      { kw: ['singapore', 'sentosa', 'marina bay'],                                          info: { dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'],            minPerDayPKR: 35000 } },
+      { kw: ['london', 'uk', 'england', 'britain'],                                          info: { dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'],       minPerDayPKR: 50000 } },
+      { kw: ['dubai', 'uae', 'emirates', 'abu dhabi'],                                       info: { dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'],  minPerDayPKR: 50000 } },
+      { kw: ['bali', 'indonesia'],                                                            info: { dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'],         minPerDayPKR: 18000 } },
+      { kw: ['istanbul', 'turkey'],                                                           info: { dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'],          minPerDayPKR: 22000 } },
+      { kw: ['kuala lumpur', 'malaysia'],                                                     info: { dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'],             minPerDayPKR: 18000 } },
+      { kw: ['barcelona', 'spain'],                                                           info: { dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'],     minPerDayPKR: 40000 } },
+      { kw: ['rome', 'italy'],                                                                info: { dest: 'Rome, Italy',       style: 'Cultural',   interests: ['history', 'art', 'food'],              minPerDayPKR: 38000 } },
+      { kw: ['morocco', 'marrakech', 'casablanca'],                                           info: { dest: 'Marrakech, Morocco',style: 'Cultural',   interests: ['culture', 'bazaar', 'food'],           minPerDayPKR: 20000 } },
+      { kw: ['vietnam', 'hanoi', 'ho chi', 'saigon', 'hoi an'],                              info: { dest: 'Hanoi, Vietnam',    style: 'Cultural',   interests: ['culture', 'food', 'history'],          minPerDayPKR: 15000 } },
+      { kw: ['egypt', 'cairo', 'pyramids'],                                                   info: { dest: 'Cairo, Egypt',      style: 'Cultural',   interests: ['history', 'pyramids', 'culture'],      minPerDayPKR: 22000 } },
+      { kw: ['greece', 'athens', 'santorini', 'mykonos'],                                    info: { dest: 'Athens, Greece',    style: 'Cultural',   interests: ['history', 'beaches', 'food'],          minPerDayPKR: 38000 } },
+      { kw: ['pakistan', 'hunza', 'skardu', 'lahore', 'islamabad', 'swat', 'murree'],        info: { dest: 'Hunza Valley',      style: 'Adventure',  interests: ['trekking', 'mountains', 'nature'],     minPerDayPKR:  8000 } },
+      { kw: ['maldives', 'maldive'],                                                          info: { dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'],   minPerDayPKR: 80000 } },
+    ]
+    const inlineDest = DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info
+      ?? (detectedDestinationRef.current as DestInfo | null)
+
+    // ── Budget-to-PKR conversion (for minimum budget check) ──────────────────
+    const toPKR: Record<string, number> = {
+      PKR: 1, USD: 280, EUR: 305, GBP: 355,
+      AED: 76, SAR: 75, CAD: 207, AUD: 180, INR: 1 / 3.4, TRY: 9,
     }
-    const pickDestination = (): { dest: string; style: string; interests: string[] } => {
-      // Always prefer a destination detected earlier in the conversation
-      if (detectedDestinationRef.current) return detectedDestinationRef.current
+
+    // ── Helper: build the "generate" JSON block ───────────────────────────────
+    const makeGenerateJSON = (d: DestInfo, days: number, budget: number) => `\`\`\`json
+{
+  "readyToGenerate": true,
+  "preferences": {
+    "budget": ${budget},
+    "currency": "${cur}",
+    "duration": ${days},
+    "interests": ${JSON.stringify(d.interests)},
+    "weather": "mild",
+    "travelStyle": "${d.style}",
+    "departureCity": "Your city",
+    "groupType": "solo"
+  },
+  "suggestedDestination": "${d.dest}"
+}
+\`\`\``
+
+    // ── Smart shortcut: all info in one message → validate budget → generate ──
+    if (extractedDays && extractedBudget && inlineDest) {
+      const budgetPKR   = Math.round(extractedBudget * (toPKR[cur] ?? 1))
+      const minPerDay   = inlineDest.minPerDayPKR ?? 20000
+      const minTotalPKR = minPerDay * extractedDays
+      const minDisplay  = Math.round(minTotalPKR / (toPKR[cur] ?? 1))
+      const ratio       = budgetPKR / minTotalPKR
+
+      if (ratio < 0.5) {
+        // Budget is too low — warn clearly, don't generate yet
+        const feasibleDays = Math.max(2, Math.floor(budgetPKR / minPerDay))
+        return `Hmm, **${extractedBudget.toLocaleString()} ${cur}** for **${extractedDays} days** in **${inlineDest.dest}** is quite tight — it won't comfortably cover flights, accommodation, meals, and activities. 😬
+
+For a decent **${extractedDays}-day** trip to ${inlineDest.dest}, the recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
+
+Here are your options:
+- 💰 **Increase your budget** to at least **${minDisplay.toLocaleString()} ${cur}** — I'll plan a great trip!
+- 📅 **Shorten the trip** — with ${extractedBudget.toLocaleString()} ${cur} you could comfortably do **${feasibleDays} days** in ${inlineDest.dest}
+- ✈️ **Choose a cheaper destination** — Vietnam, Morocco, Bali, or Pakistan are all great on a tighter budget
+
+What would you like to do?`
+      }
+
+      setDest(inlineDest)
+
+      if (ratio < 0.8) {
+        // Budget is tight but workable — warn + still offer to generate
+        return `Budget noted! **${extractedBudget.toLocaleString()} ${cur}** for ${extractedDays} days in **${inlineDest.dest}** is a little under the recommended **${minDisplay.toLocaleString()} ${cur}**, but I can still put together a solid budget-friendly plan for you! 🤏
+
+- 📍 **Destination**: ${inlineDest.dest}
+- 📅 **Duration**: ${extractedDays} days
+- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur} _(budget-friendly mode)_
+
+I'll prioritise affordable guesthouses, street food, and free or low-cost activities to make every rupee count. Click **"Generate My Trip Plan"** to proceed!
+
+${makeGenerateJSON(inlineDest, extractedDays, extractedBudget)}`
+      }
+
+      // Budget is comfortable — proceed normally
+      return `Got it — I have everything I need! 🎯
+
+- 📍 **Destination**: ${inlineDest.dest}
+- 📅 **Duration**: ${extractedDays} days
+- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur}
+
+Click **"Generate My Trip Plan"** below for your complete personalised itinerary!
+
+${makeGenerateJSON(inlineDest, extractedDays, extractedBudget)}`
+    }
+
+    // Also shortcut: destination was detected in a prior turn, user now gave days + budget
+    if (extractedDays && extractedBudget && detectedDestinationRef.current && !inlineDest) {
+      const d = detectedDestinationRef.current as DestInfo
+      const budgetPKR   = Math.round(extractedBudget * (toPKR[cur] ?? 1))
+      const minPerDay   = (d as DestInfo).minPerDayPKR ?? 20000
+      const minTotalPKR = minPerDay * extractedDays
+      const minDisplay  = Math.round(minTotalPKR / (toPKR[cur] ?? 1))
+      const ratio       = budgetPKR / minTotalPKR
+
+      if (ratio < 0.5) {
+        const feasibleDays = Math.max(2, Math.floor(budgetPKR / minPerDay))
+        return `**${extractedBudget.toLocaleString()} ${cur}** for **${extractedDays} days** in **${d.dest}** is a bit low for a comfortable trip. 😬 The recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
+
+Options:
+- 💰 Increase to **${minDisplay.toLocaleString()} ${cur}**
+- 📅 Shorten to **${feasibleDays} days** within your budget
+- ✈️ Or pick a more budget-friendly destination
+
+What works best for you?`
+      }
+
+      return `Perfect — I have all I need! 🎯
+
+- 📍 **Destination**: ${d.dest}
+- 📅 **Duration**: ${extractedDays} days
+- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur}${ratio < 0.8 ? ` _(a bit tight, I'll keep it budget-friendly)_` : ''}
+
+Click **"Generate My Trip Plan"** below!
+
+${makeGenerateJSON(d, extractedDays, extractedBudget)}`
+    }
+
+    // Helper: pick destination from current message keywords, also updating detectedDestinationRef
+    const pickDestination = (): DestInfo => {
+      if (detectedDestinationRef.current) return detectedDestinationRef.current as DestInfo
       if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain'))
-        return setDest({ dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'] })
+        return setDest({ dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'],      minPerDayPKR: 50000 })
       if (msg.includes('paris') || msg.includes('france'))
-        return setDest({ dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'] })
+        return setDest({ dest: 'Paris',             style: 'Romantic',   interests: ['culture', 'food', 'art'],             minPerDayPKR: 45000 })
       if (msg.includes('spain') || msg.includes('barcelona'))
-        return setDest({ dest: 'Barcelona', style: 'Cultural', interests: ['culture', 'food', 'architecture'] })
+        return setDest({ dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'],    minPerDayPKR: 40000 })
       if (msg.includes('rome') || msg.includes('italy') || msg.includes('italian'))
-        return setDest({ dest: 'Rome, Italy', style: 'Cultural', interests: ['history', 'art', 'food'] })
+        return setDest({ dest: 'Rome, Italy',       style: 'Cultural',   interests: ['history', 'art', 'food'],             minPerDayPKR: 38000 })
       if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates') || msg.includes('abu dhabi'))
-        return setDest({ dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'] })
+        return setDest({ dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'], minPerDayPKR: 50000 })
       if (msg.includes('turkey') || msg.includes('istanbul'))
-        return setDest({ dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] })
+        return setDest({ dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'],         minPerDayPKR: 22000 })
       if (msg.includes('bali') || msg.includes('indonesia'))
-        return setDest({ dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'] })
+        return setDest({ dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'],        minPerDayPKR: 18000 })
       if (msg.includes('malaysia') || msg.includes('kuala lumpur') || msg.includes(' kl ') || msg.includes('kl,'))
-        return setDest({ dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'] })
+        return setDest({ dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'],            minPerDayPKR: 18000 })
       if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui'))
-        return setDest({ dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] })
+        return setDest({ dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'],         minPerDayPKR: 20000 })
       if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima'))
-        return setDest({ dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'] })
+        return setDest({ dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'],      minPerDayPKR: 45000 })
       if (msg.includes('singapore') || msg.includes(' sg ') || msg.includes('sentosa') || msg.includes('marina bay'))
-        return setDest({ dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'] })
+        return setDest({ dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'],           minPerDayPKR: 35000 })
       if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca') || msg.includes('fes'))
-        return setDest({ dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'] })
+        return setDest({ dest: 'Marrakech, Morocco',style: 'Cultural',   interests: ['culture', 'bazaar', 'food'],          minPerDayPKR: 20000 })
       if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon'))
-        return setDest({ dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'] })
+        return setDest({ dest: 'Hanoi, Vietnam',    style: 'Cultural',   interests: ['culture', 'food', 'history'],         minPerDayPKR: 15000 })
       if (msg.includes('maldives') || msg.includes('maldive'))
-        return setDest({ dest: 'Maldives', style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'] })
+        return setDest({ dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'],  minPerDayPKR: 80000 })
       if (msg.includes('nepal') || msg.includes('everest') || msg.includes('kathmandu'))
-        return setDest({ dest: 'Kathmandu, Nepal', style: 'Adventure', interests: ['trekking', 'mountains', 'culture'] })
+        return setDest({ dest: 'Kathmandu, Nepal',  style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'],   minPerDayPKR: 15000 })
       if (msg.includes('africa') || msg.includes('safari') || msg.includes('kenya') || msg.includes('nairobi'))
-        return setDest({ dest: 'Nairobi, Kenya', style: 'Adventure', interests: ['wildlife', 'safari', 'nature'] })
+        return setDest({ dest: 'Nairobi, Kenya',    style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'],       minPerDayPKR: 25000 })
       if (msg.includes('new york') || msg.includes('nyc') || msg.includes('manhattan') || msg.includes('america') || msg.includes('usa') || msg.includes('united states'))
-        return setDest({ dest: 'New York, USA', style: 'Cultural', interests: ['city', 'culture', 'food'] })
+        return setDest({ dest: 'New York, USA',     style: 'Cultural',   interests: ['city', 'culture', 'food'],            minPerDayPKR: 55000 })
       if (msg.includes('australia') || msg.includes('sydney') || msg.includes('melbourne'))
-        return setDest({ dest: 'Sydney, Australia', style: 'Mixed', interests: ['beaches', 'culture', 'nature'] })
+        return setDest({ dest: 'Sydney, Australia', style: 'Mixed',      interests: ['beaches', 'culture', 'nature'],       minPerDayPKR: 50000 })
       if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids'))
-        return setDest({ dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'] })
+        return setDest({ dest: 'Cairo, Egypt',      style: 'Cultural',   interests: ['history', 'pyramids', 'culture'],     minPerDayPKR: 22000 })
       if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos'))
-        return setDest({ dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'] })
+        return setDest({ dest: 'Athens, Greece',    style: 'Cultural',   interests: ['history', 'beaches', 'food'],         minPerDayPKR: 38000 })
       // Default: rotate through popular destinations
-      const defaults = [
-        { dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] },
-        { dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] },
-        { dest: 'Bali', style: 'Relaxation', interests: ['beach', 'culture', 'food'] },
-        { dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'city'] },
+      const defaults: DestInfo[] = [
+        { dest: 'Bangkok',   style: 'Cultural',   interests: ['culture', 'food', 'temples'],  minPerDayPKR: 20000 },
+        { dest: 'Istanbul',  style: 'Cultural',   interests: ['history', 'culture', 'food'],  minPerDayPKR: 22000 },
+        { dest: 'Bali',      style: 'Relaxation', interests: ['beach', 'culture', 'food'],    minPerDayPKR: 18000 },
+        { dest: 'Dubai',     style: 'Luxury',     interests: ['luxury', 'shopping', 'city'],  minPerDayPKR: 50000 },
       ]
       const d = defaults[turnCount % defaults.length]
       detectedDestinationRef.current = d
