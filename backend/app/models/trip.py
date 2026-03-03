@@ -17,14 +17,23 @@ class TripModel:
     @staticmethod
     def create(user_id: str, data: dict) -> dict:
         """Create a new trip"""
+        # destinationId is optional — frontend plans use a static JSON file, not MongoDB destinations
+        destination_id = None
+        if data.get('destinationId'):
+            try:
+                destination_id = ObjectId(data['destinationId'])
+            except Exception:
+                destination_id = None
+
         trip = {
             'userId': ObjectId(user_id),
-            'destinationId': ObjectId(data['destinationId']),
-            'startDate': data['startDate'],
-            'endDate': data['endDate'],
-            'budget': data['budget'],
+            'destinationId': destination_id,
+            'startDate': data.get('startDate', ''),
+            'endDate': data.get('endDate', ''),
+            'budget': data.get('budget', 0),
             'itinerary': data.get('itinerary', []),
             'status': data.get('status', 'planned'),
+            'planData': data.get('planData', {}),  # Full TripPlan JSON from frontend
             'createdAt': datetime.utcnow(),
             'updatedAt': datetime.utcnow()
         }
@@ -91,7 +100,7 @@ class TripModel:
         """Update trip"""
         update_data = {'updatedAt': datetime.utcnow()}
 
-        allowed_fields = ['startDate', 'endDate', 'budget', 'itinerary', 'status']
+        allowed_fields = ['startDate', 'endDate', 'budget', 'itinerary', 'status', 'planData']
 
         for field in allowed_fields:
             if field in data:
@@ -128,12 +137,13 @@ class TripModel:
         return {
             'id': str(trip['_id']),
             'userId': str(trip['userId']),
-            'destinationId': str(trip['destinationId']),
-            'startDate': trip['startDate'],
-            'endDate': trip['endDate'],
-            'budget': trip['budget'],
+            'destinationId': str(trip['destinationId']) if trip.get('destinationId') else None,
+            'startDate': trip.get('startDate', ''),
+            'endDate': trip.get('endDate', ''),
+            'budget': trip.get('budget', 0),
             'itinerary': trip.get('itinerary', []),
             'status': trip.get('status', 'planned'),
+            'planData': trip.get('planData', {}),
             'createdAt': trip.get('createdAt', datetime.utcnow()).isoformat()
         }
 

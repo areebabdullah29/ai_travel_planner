@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   Sparkles, MapPin, DollarSign, Clock, CloudSun,
   Utensils, Compass, ArrowRight,
-  Star, Globe, Zap, Shield
+  Star, Globe, Zap, Shield, Search, Send
 } from 'lucide-react'
 
 const fadeUp = {
@@ -75,8 +75,22 @@ function FloatingOrb({ x, y, size, color, delay }: { x: string; y: string; size:
   )
 }
 
+const HERO_CHIPS = [
+  { label: '🏔️ Adventure in Pakistan', query: 'Adventure trip in northern Pakistan' },
+  { label: '🌊 Beach getaway under Rs 2,80,000', query: 'Beach getaway under Rs 280000 budget' },
+  { label: '🗼 10 days in Japan', query: '10 days in Japan' },
+  { label: '🦁 African Safari', query: 'African safari for 8 days' },
+]
+
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const navigate = useNavigate()
+
+  const handleSearch = (query?: string) => {
+    const q = (query ?? searchQuery).trim()
+    if (q) navigate('/plan', { state: { initialQuery: q } })
+  }
 
   useEffect(() => {
     const hero = heroRef.current
@@ -97,7 +111,7 @@ export default function Home() {
       {/* ── HERO ── */}
       <section
         ref={heroRef}
-        className="relative min-h-screen flex items-center justify-center pt-24 pb-20 px-6"
+        className="relative min-h-screen flex items-center justify-center pt-24 pb-20 px-4 sm:px-6"
         style={{
           background: 'radial-gradient(ellipse at var(--mouse-x, 50%) var(--mouse-y, 40%), rgba(233,30,140,0.12) 0%, transparent 60%), #06060e',
         }}
@@ -119,7 +133,7 @@ export default function Home() {
         <div className="relative z-10 max-w-5xl mx-auto text-center">
           <motion.h1
             custom={1} variants={fadeUp} initial="hidden" animate="visible"
-            className="font-display text-6xl md:text-8xl font-extrabold leading-[1.05] tracking-tight mb-6"
+            className="font-display text-4xl sm:text-6xl md:text-8xl font-extrabold leading-[1.05] tracking-tight mb-6"
           >
             Your AI Travel{' '}
             <span className="gradient-text">Companion</span>
@@ -127,47 +141,57 @@ export default function Home() {
 
           <motion.p
             custom={2} variants={fadeUp} initial="hidden" animate="visible"
-            className="text-white/60 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-white/60 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
           >
             Tell our AI your budget, interests, and dream destinations.
             Get a complete, personalized itinerary — restaurants, activities,
             costs — in seconds.
           </motion.p>
 
+          {/* Hero Search Bar */}
           <motion.div
             custom={3} variants={fadeUp} initial="hidden" animate="visible"
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="max-w-2xl mx-auto w-full px-4"
           >
-            <Link
-              to="/plan"
-              className="group flex items-center gap-2.5 px-8 py-4 rounded-2xl bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white font-semibold text-base shadow-xl shadow-[#e91e8c]/30 hover:shadow-[#e91e8c]/50 hover:scale-105 transition-all duration-300"
-            >
-              <Sparkles size={18} />
-              Plan My Trip
-              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link
-              to="/dashboard"
-              className="flex items-center gap-2.5 px-8 py-4 rounded-2xl glass text-white/80 font-medium text-base hover:text-white hover:bg-white/8 transition-all duration-300"
-            >
-              <Compass size={18} />
-              Explore Dashboard
-            </Link>
+            <div className="relative group">
+              {/* Ambient glow */}
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e91e8c]/20 to-[#4cc9f0]/20 blur-2xl group-focus-within:from-[#e91e8c]/40 group-focus-within:to-[#4cc9f0]/40 transition-all duration-500 pointer-events-none" />
+              {/* Input pill */}
+              <div className="relative flex items-center glass rounded-full border border-white/10 group-focus-within:border-[#e91e8c]/50 transition-colors duration-300 shadow-2xl shadow-black/50">
+                <Search size={20} className="ml-5 text-[#e91e8c]/70 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSearch() }}
+                  placeholder="Where do you want to go? e.g. 'Paris for 7 days'"
+                  className="flex-1 bg-transparent px-4 py-5 text-white placeholder-white/30 text-base focus:outline-none"
+                />
+                <button
+                  onClick={() => handleSearch()}
+                  disabled={!searchQuery.trim()}
+                  className="mr-2 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#e91e8c]/40 hover:scale-105 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
+                >
+                  <Send size={16} />
+                  <span className="hidden sm:inline">Plan Trip</span>
+                </button>
+              </div>
+            </div>
           </motion.div>
 
-          {/* Quick query chips */}
+          {/* Quick suggestion chips */}
           <motion.div
             custom={4} variants={fadeUp} initial="hidden" animate="visible"
-            className="mt-10 flex flex-wrap gap-2 justify-center"
+            className="mt-4 flex flex-wrap gap-2 justify-center"
           >
-            {['🏔️ Adventure in Pakistan', '🌊 Beach getaway under Rs 2,80,000', '🗼 10 days in Japan', '🦁 African Safari'].map(chip => (
-              <Link
-                key={chip}
-                to="/plan"
+            {HERO_CHIPS.map(({ label, query }) => (
+              <button
+                key={label}
+                onClick={() => handleSearch(query)}
                 className="px-4 py-2 rounded-full glass text-white/60 text-sm hover:text-white hover:border-[#e91e8c]/30 hover:bg-[#e91e8c]/5 transition-all duration-200 cursor-pointer"
               >
-                {chip}
-              </Link>
+                {label}
+              </button>
             ))}
           </motion.div>
         </div>
@@ -214,7 +238,7 @@ export default function Home() {
 
       {/* ── STATS ── */}
       <section className="py-12 border-y border-white/5">
-        <div className="max-w-5xl mx-auto px-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {stats.map(({ label, value, icon: Icon }, i) => (
               <motion.div
@@ -234,7 +258,7 @@ export default function Home() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -277,7 +301,7 @@ export default function Home() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="py-24 px-6" style={{ background: 'rgba(233,30,140,0.03)' }}>
+      <section className="py-16 sm:py-24 px-4 sm:px-6" style={{ background: 'rgba(233,30,140,0.03)' }}>
         <div className="max-w-6xl mx-auto">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -314,7 +338,7 @@ export default function Home() {
       </section>
 
       {/* ── DESTINATIONS CAROUSEL ── */}
-      <section className="py-24 px-6 overflow-hidden">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -388,7 +412,7 @@ export default function Home() {
       </section>
 
       {/* ── INTERESTS ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -430,7 +454,7 @@ export default function Home() {
       </section>
 
       {/* ── AI SHOWCASE ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="glass rounded-3xl p-8 md:p-14 relative overflow-hidden">
             {/* Background gradient */}
@@ -511,12 +535,12 @@ export default function Home() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
           >
-            <h2 className="font-display text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
+            <h2 className="font-display text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
               Ready to{' '}
               <span className="gradient-text">explore?</span>
             </h2>

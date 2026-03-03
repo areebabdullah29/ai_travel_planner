@@ -48,14 +48,12 @@ def create_trip():
     current_user_id = get_jwt_identity()
     data = request.get_json()
 
-    # Validate required fields
-    required_fields = ['destinationId', 'startDate', 'endDate', 'budget']
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({
-                'success': False,
-                'error': f'{field} is required'
-            }), 400
+    # budget or planData is required; destinationId/startDate/endDate are optional
+    if data.get('budget') is None and not data.get('planData'):
+        return jsonify({
+            'success': False,
+            'error': 'budget or planData is required'
+        }), 400
 
     trip = TripModel.create(current_user_id, data)
 

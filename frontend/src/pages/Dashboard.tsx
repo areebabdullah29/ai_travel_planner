@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -6,7 +6,7 @@ import {
   DollarSign, Clock, Globe, Sparkles, MapPin,
   TrendingUp, BarChart3, Plane,
   Search, Filter, History, RefreshCw,
-  MessageSquare, ChevronRight
+  MessageSquare, ChevronRight, Loader2
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import { useAuth } from '@/context/AuthContext'
@@ -59,12 +59,21 @@ function timeAgo(iso: string): string {
 type DashTab = 'trips' | 'history'
 
 export default function Dashboard() {
-  const { savedTrips, deleteTrip, setCurrentPlan, searchHistory, clearSearchHistory } = useTripContext()
+  const { savedTrips, deleteTrip, updateTripStatus, setCurrentPlan, searchHistory, clearSearchHistory, isSyncing } = useTripContext()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<SavedTrip['status'] | 'all'>('all')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<DashTab>('trips')
+  const [statusMenuId, setStatusMenuId] = useState<string | null>(null)
+
+  // Close status dropdown when clicking outside
+  useEffect(() => {
+    if (!statusMenuId) return
+    const close = () => setStatusMenuId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [statusMenuId])
 
   const filtered = savedTrips.filter(t => {
     const matchSearch = t.destination.toLowerCase().includes(search.toLowerCase())
@@ -130,10 +139,17 @@ export default function Dashboard() {
               <p className="text-white/30 text-xs mt-1">{dashSubtitle}</p>
             </div>
           </div>
-          <Link to="/plan"
-            className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white font-semibold hover:shadow-lg hover:shadow-[#e91e8c]/30 hover:scale-105 transition-all duration-300">
-            <Plus size={18} /> Plan New Trip
-          </Link>
+          <div className="flex items-center gap-3">
+            {isSyncing && (
+              <span className="flex items-center gap-1.5 text-white/30 text-xs">
+                <Loader2 size={13} className="animate-spin" /> Syncing…
+              </span>
+            )}
+            <Link to="/plan"
+              className="flex items-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white font-semibold hover:shadow-lg hover:shadow-[#e91e8c]/30 hover:scale-105 transition-all duration-300">
+              <Plus size={18} /> Plan New Trip
+            </Link>
+          </div>
         </motion.div>
 
         {/* Stats */}
@@ -227,7 +243,36 @@ export default function Dashboard() {
                           <div className="h-36 flex items-center justify-center text-6xl relative overflow-hidden"
                             style={{ background: `linear-gradient(135deg, ${trip.status === 'completed' ? '#06d6a0' : trip.status === 'ongoing' ? '#ffd166' : '#e91e8c'}10, #0e0e1a20)` }}>
                             <motion.span whileHover={{ scale: 1.2, rotate: 10 }} transition={{ type: 'spring', stiffness: 300 }}>{emoji}</motion.span>
-                            <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full text-xs font-semibold" style={{ background: st.bg, color: st.text }}>{st.label}</div>
+                            {/* Status badge — click to change status */}
+                            <div className="absolute top-3 right-3">
+                              <button
+                                onClick={e => { e.stopPropagation(); setStatusMenuId(statusMenuId === trip.id ? null : trip.id) }}
+                                className="px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                                style={{ background: st.bg, color: st.text }}
+                                title="Change status"
+                              >
+                                {st.label} ▾
+                              </button>
+                              {statusMenuId === trip.id && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.9, y: -4 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  className="absolute right-0 top-8 z-20 glass rounded-xl overflow-hidden shadow-xl border border-white/10 min-w-[120px]"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  {(['planned', 'ongoing', 'completed'] as const).map(s => (
+                                    <button
+                                      key={s}
+                                      onClick={() => { updateTripStatus(trip.id, s); setStatusMenuId(null) }}
+                                      className="w-full text-left px-3 py-2 text-xs capitalize hover:bg-white/8 transition-colors"
+                                      style={{ color: STATUS_COLORS[s].text }}
+                                    >
+                                      {trip.status === s ? '✓ ' : ''}{STATUS_COLORS[s].label}
+                                    </button>
+                                  ))}
+                                </motion.div>
+                              )}
+                            </div>
                             <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3">
                               <Link to="/itinerary" onClick={() => setCurrentPlan(trip)}
                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e91e8c] text-white text-xs font-semibold">

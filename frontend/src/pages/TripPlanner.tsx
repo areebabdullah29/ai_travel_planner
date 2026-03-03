@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send, Sparkles, Plane, RefreshCw, Zap, RotateCcw,
-  MapPin, Clock, Users, Thermometer, Heart, Coins
+  MapPin, Clock, Users, Thermometer, Heart, Coins, Search
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import {
@@ -99,7 +99,12 @@ export default function TripPlanner() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const initialQuerySentRef = useRef(false)
+  // Tracks the destination the user mentioned across all conversation turns
+  const detectedDestinationRef = useRef<{ dest: string; style: string; interests: string[] } | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const { setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory } = useTripContext()
 
   useEffect(() => {
@@ -111,42 +116,64 @@ export default function TripPlanner() {
     const cur = selectedCurrency
     const defaultBudget = DEFAULT_BUDGETS[cur] ?? 1500
 
-    // Helper: pick a destination based on message keywords (only destinations in destinations.json)
+    // Helper: pick destination from current message keywords, also updating detectedDestinationRef
+    const setDest = (d: { dest: string; style: string; interests: string[] }) => {
+      detectedDestinationRef.current = d
+      return d
+    }
     const pickDestination = (): { dest: string; style: string; interests: string[] } => {
+      // Always prefer a destination detected earlier in the conversation
+      if (detectedDestinationRef.current) return detectedDestinationRef.current
       if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain'))
-        return { dest: 'London, UK', style: 'Cultural', interests: ['culture', 'history', 'museums'] }
+        return setDest({ dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'] })
       if (msg.includes('paris') || msg.includes('france'))
-        return { dest: 'Paris, France', style: 'Romantic', interests: ['culture', 'food', 'art'] }
+        return setDest({ dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'] })
       if (msg.includes('spain') || msg.includes('barcelona'))
-        return { dest: 'Barcelona, Spain', style: 'Cultural', interests: ['culture', 'food', 'architecture'] }
-      if (msg.includes('europe') || msg.includes('rome') || msg.includes('italy'))
-        return { dest: 'Istanbul, Turkey', style: 'Cultural', interests: ['history', 'culture', 'food'] }
-      if (msg.includes('middle east') || msg.includes('dubai') || msg.includes('arab') || msg.includes('uae'))
-        return { dest: 'Dubai, UAE', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'] }
+        return setDest({ dest: 'Barcelona', style: 'Cultural', interests: ['culture', 'food', 'architecture'] })
+      if (msg.includes('rome') || msg.includes('italy') || msg.includes('italian'))
+        return setDest({ dest: 'Rome, Italy', style: 'Cultural', interests: ['history', 'art', 'food'] })
+      if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates') || msg.includes('abu dhabi'))
+        return setDest({ dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'] })
       if (msg.includes('turkey') || msg.includes('istanbul'))
-        return { dest: 'Istanbul, Turkey', style: 'Cultural', interests: ['history', 'culture', 'food'] }
+        return setDest({ dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] })
       if (msg.includes('bali') || msg.includes('indonesia'))
-        return { dest: 'Bali, Indonesia', style: 'Relaxation', interests: ['beach', 'temples', 'culture'] }
-      if (msg.includes('malaysia') || msg.includes('kuala lumpur') || msg.includes(' kl '))
-        return { dest: 'Kuala Lumpur, Malaysia', style: 'Mixed', interests: ['food', 'culture', 'city'] }
-      if (msg.includes('africa') || msg.includes('safari') || msg.includes('kenya'))
-        return { dest: 'Bali, Indonesia', style: 'Adventure', interests: ['nature', 'culture', 'adventure'] }
-      if (msg.includes('morocco') || msg.includes('marrakech'))
-        return { dest: 'Istanbul, Turkey', style: 'Cultural', interests: ['culture', 'bazaar', 'food'] }
-      if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi'))
-        return { dest: 'Kuala Lumpur, Malaysia', style: 'Cultural', interests: ['culture', 'food', 'history'] }
-      if (msg.includes('maldives') || msg.includes('island') || msg.includes('resort'))
-        return { dest: 'Bali, Indonesia', style: 'Luxury', interests: ['beach', 'relaxation', 'snorkeling'] }
+        return setDest({ dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'] })
+      if (msg.includes('malaysia') || msg.includes('kuala lumpur') || msg.includes(' kl ') || msg.includes('kl,'))
+        return setDest({ dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'] })
+      if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui'))
+        return setDest({ dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] })
+      if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima'))
+        return setDest({ dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'] })
+      if (msg.includes('singapore') || msg.includes(' sg ') || msg.includes('sentosa') || msg.includes('marina bay'))
+        return setDest({ dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'] })
+      if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca') || msg.includes('fes'))
+        return setDest({ dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'] })
+      if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon'))
+        return setDest({ dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'] })
+      if (msg.includes('maldives') || msg.includes('maldive'))
+        return setDest({ dest: 'Maldives', style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'] })
       if (msg.includes('nepal') || msg.includes('everest') || msg.includes('kathmandu'))
-        return { dest: 'Hunza Valley, Pakistan', style: 'Adventure', interests: ['trekking', 'mountains', 'nature'] }
-      // Default: rotate through destinations in our database
+        return setDest({ dest: 'Kathmandu, Nepal', style: 'Adventure', interests: ['trekking', 'mountains', 'culture'] })
+      if (msg.includes('africa') || msg.includes('safari') || msg.includes('kenya') || msg.includes('nairobi'))
+        return setDest({ dest: 'Nairobi, Kenya', style: 'Adventure', interests: ['wildlife', 'safari', 'nature'] })
+      if (msg.includes('new york') || msg.includes('nyc') || msg.includes('manhattan') || msg.includes('america') || msg.includes('usa') || msg.includes('united states'))
+        return setDest({ dest: 'New York, USA', style: 'Cultural', interests: ['city', 'culture', 'food'] })
+      if (msg.includes('australia') || msg.includes('sydney') || msg.includes('melbourne'))
+        return setDest({ dest: 'Sydney, Australia', style: 'Mixed', interests: ['beaches', 'culture', 'nature'] })
+      if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids'))
+        return setDest({ dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'] })
+      if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos'))
+        return setDest({ dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'] })
+      // Default: rotate through popular destinations
       const defaults = [
-        { dest: 'Bali, Indonesia', style: 'Relaxation', interests: ['beach', 'culture', 'food'] },
-        { dest: 'Istanbul, Turkey', style: 'Cultural', interests: ['history', 'culture', 'food'] },
-        { dest: 'Kuala Lumpur, Malaysia', style: 'Mixed', interests: ['food', 'culture', 'city'] },
-        { dest: 'Dubai, UAE', style: 'Luxury', interests: ['luxury', 'shopping', 'city'] },
+        { dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] },
+        { dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] },
+        { dest: 'Bali', style: 'Relaxation', interests: ['beach', 'culture', 'food'] },
+        { dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'city'] },
       ]
-      return defaults[turnCount % defaults.length]
+      const d = defaults[turnCount % defaults.length]
+      detectedDestinationRef.current = d
+      return d
     }
 
     if (turnCount === 0 || msg.includes('hello') || msg.includes('hi')) {
@@ -157,7 +184,8 @@ Let me understand your dream adventure better. Could you tell me:
 2. **How long** are you planning to travel?`
     }
 
-    if (msg.includes('pakistan') || msg.includes('hunza') || msg.includes('northern') || msg.includes('skardu')) {
+    if (msg.includes('pakistan') || msg.includes('hunza') || msg.includes('northern') || msg.includes('skardu') || msg.includes('lahore') || msg.includes('islamabad') || msg.includes('swat') || msg.includes('murree')) {
+      setDest({ dest: 'Hunza Valley', style: 'Adventure', interests: ['trekking', 'mountains', 'nature'] })
       return `Pakistan is absolutely stunning! 🏔️ The northern areas — Hunza, Skardu, Fairy Meadows — are breathtaking.
 
 A few questions to tailor your Pakistan adventure:
@@ -166,16 +194,40 @@ A few questions to tailor your Pakistan adventure:
 - **Group**: Traveling solo, with friends, or family?`
     }
 
-    if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka')) {
-      return `Japan is a magical destination! 🗼 From ancient temples to futuristic cities.
+    if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui') || msg.includes('krabi')) {
+      setDest({ dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] })
+      return `Thailand is incredible! 🇹🇭🏯 From Bangkok's glittering temples to Phuket's beaches and Chiang Mai's night bazaars.
 
 Tell me more:
 - **Duration**: How many days are you planning?
-- **Interests**: Culture & temples, anime/gaming, food tours, nature, or nightlife?
-- **Season**: Any preferred time of year? (Cherry blossom season in April is spectacular!)`
+- **Which part**: Bangkok city, Phuket beaches, Chiang Mai culture, or island-hopping?
+- **Interests**: Temples & culture, street food, beaches & diving, nightlife, or a mix?
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima')) {
+      setDest({ dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'] })
+      return `Japan is a magical destination! 🗼🌸 From Tokyo's futuristic skyline to Kyoto's ancient temples.
+
+Tell me more:
+- **Duration**: How many days are you planning?
+- **Interests**: Culture & temples, anime/gaming, street food tours, nature, or all of it?
+- **Season**: Any preferred time? Cherry blossom season in April is absolutely spectacular!
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('singapore') || msg.includes('marina bay') || msg.includes('sentosa')) {
+      setDest({ dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'] })
+      return `Singapore is a world-class city-state! 🇸🇬✨ Marina Bay Sands, Gardens by the Bay, and incredible food.
+
+Tell me:
+- **Duration**: How many days?
+- **Interests**: City sightseeing, hawker food culture, Universal Studios, shopping, or nature?
+- **Budget**: What's your budget in ${cur}?`
     }
 
     if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain')) {
+      setDest({ dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'] })
       return `London is a world-class city! 🏙️🎭 From Buckingham Palace to the British Museum, the West End shows, and an incredible food scene.
 
 Tell me more:
@@ -185,6 +237,7 @@ Tell me more:
     }
 
     if (msg.includes('paris') || msg.includes('france')) {
+      setDest({ dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'] })
       return `Paris, the City of Light! 🗼✨ The Eiffel Tower, Louvre, and world-famous cuisine await.
 
 A few questions:
@@ -194,6 +247,7 @@ A few questions:
     }
 
     if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates')) {
+      setDest({ dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'] })
       return `Dubai — where luxury meets adventure! 🏙️✨ Burj Khalifa, desert safaris, and world-class dining.
 
 Let me know:
@@ -203,6 +257,7 @@ Let me know:
     }
 
     if (msg.includes('bali') || msg.includes('indonesia')) {
+      setDest({ dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'] })
       return `Bali is simply magical! 🌴🌺 Stunning temples, rice terraces, beaches, and vibrant culture.
 
 Tell me:
@@ -212,6 +267,7 @@ Tell me:
     }
 
     if (msg.includes('istanbul') || (msg.includes('turkey') && !msg.includes('turkey sandwich'))) {
+      setDest({ dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] })
       return `Istanbul — where East meets West! 🕌🌉 Ancient bazaars, the Hagia Sophia, Bosphorus cruises, and incredible food.
 
 Let me know:
@@ -220,12 +276,53 @@ Let me know:
 - **Budget**: What's your budget in ${cur}?`
     }
 
-    if (msg.includes('kuala lumpur') || msg.includes('malaysia')) {
+    if (msg.includes('kuala lumpur') || msg.includes('malaysia') || msg.includes(' kl ') || msg.includes('kl,')) {
+      setDest({ dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'] })
       return `Kuala Lumpur is vibrant and affordable! 🏙️🌃 Petronas Towers, amazing street food, and colonial charm.
 
 Tell me:
 - **Duration**: How many days in KL?
 - **Interests**: City sightseeing, street food, shopping, nature retreats, or day trips?
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca')) {
+      setDest({ dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'] })
+      return `Morocco is enchanting! 🕌🌺 Marrakech's medinas, the Sahara Desert, and incredible cuisine await.
+
+Tell me:
+- **Duration**: How many days?
+- **Interests**: Ancient medinas & souks, Sahara desert tour, food & cooking, architecture, or beaches?
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids') || msg.includes('luxor')) {
+      setDest({ dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'] })
+      return `Egypt — one of history's greatest civilizations! 🏺🌅 The Pyramids, the Nile, and ancient temples.
+
+Tell me:
+- **Duration**: How many days?
+- **Interests**: Ancient monuments & pyramids, Nile cruise, diving in the Red Sea, or Cairo city life?
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos')) {
+      setDest({ dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'] })
+      return `Greece is breathtaking! 🏛️⛵ Ancient history, stunning island scenery, and amazing Mediterranean food.
+
+Tell me:
+- **Duration**: How many days?
+- **Interests**: Ancient history & Acropolis, island-hopping, beaches & sailing, food & wine, or city life?
+- **Budget**: What's your budget in ${cur}?`
+    }
+
+    if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon') || msg.includes('hoi an')) {
+      setDest({ dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'] })
+      return `Vietnam is a traveler's dream! 🌿🍜 Ancient culture, incredible street food, and stunning landscapes.
+
+Tell me:
+- **Duration**: How many days?
+- **Which region**: Hanoi (north), Hoi An & Da Nang (central), Ho Chi Minh City (south), or Ha Long Bay?
 - **Budget**: What's your budget in ${cur}?`
     }
 
@@ -414,6 +511,15 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
     }
   }, [input, isTyping, conversationHistory, callAI])
 
+  // Auto-send query when navigated from Home search bar
+  useEffect(() => {
+    const query = (location.state as { initialQuery?: string } | null)?.initialQuery
+    if (query?.trim() && !initialQuerySentRef.current) {
+      initialQuerySentRef.current = true
+      setTimeout(() => void sendMessage(query.trim()), 150)
+    }
+  }, [location.state, sendMessage])
+
   const handleGeneratePlan = useCallback(async () => {
     if (isGenerating) return
     setIsGenerating(true)
@@ -473,6 +579,7 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
     setShowGenerateButton(false)
     setExtractedPreferences(null)
     setConversationHistory([])
+    detectedDestinationRef.current = null
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -483,232 +590,328 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
   }
 
   const selectedCurrencyInfo = CURRENCIES.find(c => c.code === selectedCurrency)
+  const isInitialState = messages.length === 1
 
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 flex flex-col">
-      <div className="max-w-4xl mx-auto w-full flex flex-col h-full gap-5">
+    <div className="min-h-screen pt-16 sm:pt-20 pb-8 px-3 sm:px-4 flex flex-col">
+      <div className="max-w-4xl mx-auto w-full flex flex-col h-full gap-4 sm:gap-5">
 
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center py-6"
+          className="text-center py-3 sm:py-6"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-coral text-[#e91e8c] text-sm font-medium mb-4">
-            <Sparkles size={14} />
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass-coral text-[#e91e8c] text-xs sm:text-sm font-medium mb-3">
+            <Sparkles size={13} />
             AI Travel Assistant
           </div>
-          <h1 className="font-display text-4xl md:text-5xl font-bold text-white mb-3">
+          <h1 className="font-display text-2xl sm:text-4xl md:text-5xl font-bold text-white mb-2">
             Plan Your Perfect Trip
           </h1>
-          <p className="text-white/50 text-base">
+          <p className="text-white/50 text-sm sm:text-base">
             Chat with our AI to create a personalized travel itinerary
           </p>
         </motion.div>
 
-        {/* Currency Selector */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="glass rounded-2xl p-4"
-        >
-          <div className="flex items-center gap-2 mb-3">
-            <Coins size={14} className="text-[#e91e8c]" />
-            <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">
-              Budget Currency
-            </span>
-            {selectedCurrencyInfo && (
-              <span className="ml-auto text-white/50 text-xs">
-                {selectedCurrencyInfo.flag} {selectedCurrencyInfo.name}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {CURRENCIES.map(({ code, flag }) => (
-              <button
-                key={code}
-                onClick={() => setSelectedCurrency(code)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                  selectedCurrency === code
-                    ? 'bg-[#e91e8c] text-white shadow-lg shadow-[#e91e8c]/30 scale-105'
-                    : 'glass text-white/50 hover:text-white hover:bg-white/8'
-                }`}
-              >
-                <span>{flag}</span>
-                <span>{code}</span>
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Context pills */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.25 }}
-          className="flex flex-wrap gap-2 justify-center"
-        >
-          {[
-            { icon: Coins, label: selectedCurrency },
-            { icon: Clock, label: 'Duration-based' },
-            { icon: Heart, label: 'Interest-driven' },
-            { icon: Thermometer, label: 'Weather-smart' },
-            { icon: Users, label: 'Group-optimized' },
-            { icon: MapPin, label: '190+ destinations' },
-          ].map(({ icon: Icon, label }) => (
-            <span key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-white/50 text-xs">
-              <Icon size={11} className="text-[#e91e8c]" />
-              {label}
-            </span>
-          ))}
-        </motion.div>
-
-        {/* Chat Window */}
-        <div className="flex-1 glass rounded-3xl overflow-hidden flex flex-col" style={{ minHeight: '55vh', maxHeight: '65vh' }}>
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
-                >
-                  {/* Avatar */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    msg.role === 'assistant'
-                      ? 'bg-gradient-to-br from-[#e91e8c] to-[#ffd166]'
-                      : 'bg-gradient-to-br from-[#4cc9f0] to-[#0066cc]'
-                  }`}>
-                    {msg.role === 'assistant'
-                      ? <Sparkles size={14} className="text-white" />
-                      : <span className="text-white text-xs font-bold">U</span>
-                    }
-                  </div>
-
-                  {/* Bubble */}
-                  <div className={`max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-                    {msg.role === 'assistant' && (
-                      <span className="text-[#e91e8c] text-xs font-semibold ml-1">TravelBuddy AI</span>
-                    )}
-                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
-                      msg.role === 'user'
-                        ? 'bg-[#e91e8c] text-white rounded-tr-sm'
-                        : 'glass text-white/85 rounded-tl-sm'
-                    }`}>
-                      {msg.content.split('**').map((part, i) =>
-                        i % 2 === 1
-                          ? <strong key={i} className="text-white font-semibold">{part}</strong>
-                          : <span key={i}>{part}</span>
-                      )}
-                    </div>
-                    <span className="text-white/25 text-xs ml-1">
-                      {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        <AnimatePresence mode="wait">
+          {isInitialState ? (
+            /* ── Initial state: Google-style prominent search ── */
+            <motion.div
+              key="search-hero"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16, scale: 0.97 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="flex flex-col items-center gap-7"
+            >
+              {/* Currency Selector */}
+              <div className="glass rounded-2xl p-4 w-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <Coins size={14} className="text-[#e91e8c]" />
+                  <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">
+                    Budget Currency
+                  </span>
+                  {selectedCurrencyInfo && (
+                    <span className="ml-auto text-white/50 text-xs">
+                      {selectedCurrencyInfo.flag} {selectedCurrencyInfo.name}
                     </span>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            <AnimatePresence>
-              <AITyping active={isTyping} />
-            </AnimatePresence>
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Generate Plan Button */}
-          <AnimatePresence>
-            {showGenerateButton && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="px-6 py-3 border-t border-white/5"
-              >
-                <button
-                  onClick={() => void handleGeneratePlan()}
-                  disabled={isGenerating}
-                  className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-gradient-to-r from-[#e91e8c] to-[#ffd166] text-white font-bold text-base hover:shadow-xl hover:shadow-[#e91e8c]/30 hover:scale-[1.01] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isGenerating ? (
-                    <>
-                      <RefreshCw size={18} className="animate-spin" />
-                      Creating your perfect itinerary...
-                    </>
-                  ) : (
-                    <>
-                      <Zap size={18} />
-                      Generate My Trip Plan
-                      <Plane size={16} />
-                    </>
                   )}
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Input area */}
-          <div className="p-4 border-t border-white/5">
-            <div className="flex items-end gap-3">
-              <button
-                onClick={resetChat}
-                className="p-2.5 rounded-xl text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex-shrink-0"
-                title="Reset conversation"
-              >
-                <RotateCcw size={18} />
-              </button>
-
-              <div className="flex-1 relative">
-                <textarea
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Tell me about your dream trip..."
-                  rows={1}
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:border-[#e91e8c]/40 transition-colors"
-                  style={{ minHeight: '46px', maxHeight: '120px' }}
-                  onInput={(e) => {
-                    const target = e.target as HTMLTextAreaElement
-                    target.style.height = 'auto'
-                    target.style.height = `${Math.min(target.scrollHeight, 120)}px`
-                  }}
-                />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CURRENCIES.map(({ code, flag }) => (
+                    <button
+                      key={code}
+                      onClick={() => setSelectedCurrency(code)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        selectedCurrency === code
+                          ? 'bg-[#e91e8c] text-white shadow-lg shadow-[#e91e8c]/30 scale-105'
+                          : 'glass text-white/50 hover:text-white hover:bg-white/8'
+                      }`}
+                    >
+                      <span>{flag}</span>
+                      <span>{code}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <button
-                onClick={() => void sendMessage()}
-                disabled={!input.trim() || isTyping}
-                className="p-2.5 rounded-xl bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white hover:shadow-lg hover:shadow-[#e91e8c]/30 hover:scale-105 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
-              >
-                <Send size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
+              {/* Prominent Search Bar */}
+              <div className="w-full max-w-2xl">
+                <p className="text-white/40 text-sm text-center mb-5">
+                  Describe your dream trip — destination, duration, budget, or travel style
+                </p>
+                <div className="relative group">
+                  {/* Ambient glow */}
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e91e8c]/20 to-[#4cc9f0]/20 blur-2xl group-focus-within:from-[#e91e8c]/35 group-focus-within:to-[#4cc9f0]/35 transition-all duration-500 pointer-events-none" />
+                  {/* Input pill */}
+                  <div className="relative flex items-center glass rounded-full border border-white/10 group-focus-within:border-[#e91e8c]/50 transition-colors duration-300 shadow-2xl shadow-black/40">
+                    <Search size={20} className="ml-5 text-[#e91e8c]/70 flex-shrink-0" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="e.g. 'Paris for 7 days on a $2000 budget'"
+                      autoFocus
+                      className="flex-1 bg-transparent px-4 py-5 text-white placeholder-white/30 text-base focus:outline-none"
+                    />
+                    <button
+                      onClick={() => void sendMessage()}
+                      disabled={!input.trim() || isTyping}
+                      className="mr-2 flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white font-semibold text-sm hover:shadow-lg hover:shadow-[#e91e8c]/40 hover:scale-105 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
+                    >
+                      <Send size={16} />
+                      <span className="hidden sm:inline">Plan Trip</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-        {/* Quick Prompts */}
-        <div>
-          <p className="text-white/30 text-xs text-center mb-3 uppercase tracking-widest">Quick start prompts</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
-            {QUICK_PROMPTS.map(({ icon, text }) => (
-              <button
-                key={text}
-                onClick={() => void sendMessage(text)}
-                disabled={isTyping}
-                className="glass text-left px-4 py-3 rounded-xl text-white/60 text-sm hover:text-white hover:border-[#e91e8c]/20 hover:bg-[#e91e8c]/5 transition-all duration-200 disabled:opacity-40"
-              >
-                <span className="mr-2">{icon}</span>
-                {text}
-              </button>
-            ))}
-          </div>
-        </div>
+              {/* Quick suggestion chips */}
+              <div className="w-full max-w-2xl">
+                <p className="text-white/30 text-xs text-center mb-3 uppercase tracking-widest">Try these</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {QUICK_PROMPTS.map(({ icon, text }) => (
+                    <button
+                      key={text}
+                      onClick={() => void sendMessage(text)}
+                      disabled={isTyping}
+                      className="flex items-center gap-1.5 glass px-4 py-2 rounded-full text-white/55 text-sm hover:text-white hover:border-[#e91e8c]/30 hover:bg-[#e91e8c]/8 transition-all duration-200 disabled:opacity-40"
+                    >
+                      <span>{icon}</span>
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            /* ── Chat state: normal conversation layout ── */
+            <motion.div
+              key="chat-layout"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col gap-5 flex-1"
+            >
+              {/* Currency Selector */}
+              <div className="glass rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Coins size={14} className="text-[#e91e8c]" />
+                  <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">
+                    Budget Currency
+                  </span>
+                  {selectedCurrencyInfo && (
+                    <span className="ml-auto text-white/50 text-xs">
+                      {selectedCurrencyInfo.flag} {selectedCurrencyInfo.name}
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {CURRENCIES.map(({ code, flag }) => (
+                    <button
+                      key={code}
+                      onClick={() => setSelectedCurrency(code)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                        selectedCurrency === code
+                          ? 'bg-[#e91e8c] text-white shadow-lg shadow-[#e91e8c]/30 scale-105'
+                          : 'glass text-white/50 hover:text-white hover:bg-white/8'
+                      }`}
+                    >
+                      <span>{flag}</span>
+                      <span>{code}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Context pills */}
+              <div className="flex flex-wrap gap-2 justify-center">
+                {[
+                  { icon: Coins, label: selectedCurrency },
+                  { icon: Clock, label: 'Duration-based' },
+                  { icon: Heart, label: 'Interest-driven' },
+                  { icon: Thermometer, label: 'Weather-smart' },
+                  { icon: Users, label: 'Group-optimized' },
+                  { icon: MapPin, label: '190+ destinations' },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass text-white/50 text-xs">
+                    <Icon size={11} className="text-[#e91e8c]" />
+                    {label}
+                  </span>
+                ))}
+              </div>
+
+              {/* Chat Window */}
+              <div className="flex-1 glass rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ minHeight: '45vh', maxHeight: '60vh' }}>
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  <AnimatePresence initial={false}>
+                    {messages.map((msg) => (
+                      <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                      >
+                        {/* Avatar */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          msg.role === 'assistant'
+                            ? 'bg-gradient-to-br from-[#e91e8c] to-[#ffd166]'
+                            : 'bg-gradient-to-br from-[#4cc9f0] to-[#0066cc]'
+                        }`}>
+                          {msg.role === 'assistant'
+                            ? <Sparkles size={14} className="text-white" />
+                            : <span className="text-white text-xs font-bold">U</span>
+                          }
+                        </div>
+
+                        {/* Bubble */}
+                        <div className={`max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+                          {msg.role === 'assistant' && (
+                            <span className="text-[#e91e8c] text-xs font-semibold ml-1">TravelBuddy AI</span>
+                          )}
+                          <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${
+                            msg.role === 'user'
+                              ? 'bg-[#e91e8c] text-white rounded-tr-sm'
+                              : 'glass text-white/85 rounded-tl-sm'
+                          }`}>
+                            {msg.content.split('**').map((part, i) =>
+                              i % 2 === 1
+                                ? <strong key={i} className="text-white font-semibold">{part}</strong>
+                                : <span key={i}>{part}</span>
+                            )}
+                          </div>
+                          <span className="text-white/25 text-xs ml-1">
+                            {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+
+                  <AnimatePresence>
+                    <AITyping active={isTyping} />
+                  </AnimatePresence>
+
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Generate Plan Button */}
+                <AnimatePresence>
+                  {showGenerateButton && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="px-6 py-3 border-t border-white/5"
+                    >
+                      <button
+                        onClick={() => void handleGeneratePlan()}
+                        disabled={isGenerating}
+                        className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-gradient-to-r from-[#e91e8c] to-[#ffd166] text-white font-bold text-base hover:shadow-xl hover:shadow-[#e91e8c]/30 hover:scale-[1.01] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <RefreshCw size={18} className="animate-spin" />
+                            Creating your perfect itinerary...
+                          </>
+                        ) : (
+                          <>
+                            <Zap size={18} />
+                            Generate My Trip Plan
+                            <Plane size={16} />
+                          </>
+                        )}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Input area */}
+                <div className="p-4 border-t border-white/5">
+                  <div className="flex items-end gap-3">
+                    <button
+                      onClick={resetChat}
+                      className="p-2.5 rounded-xl text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex-shrink-0"
+                      title="Reset conversation"
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+
+                    <div className="flex-1 relative">
+                      <textarea
+                        ref={inputRef}
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Tell me about your dream trip..."
+                        rows={1}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white placeholder-white/30 text-sm resize-none focus:outline-none focus:border-[#e91e8c]/40 transition-colors"
+                        style={{ minHeight: '46px', maxHeight: '120px' }}
+                        onInput={(e) => {
+                          const target = e.target as HTMLTextAreaElement
+                          target.style.height = 'auto'
+                          target.style.height = `${Math.min(target.scrollHeight, 120)}px`
+                        }}
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => void sendMessage()}
+                      disabled={!input.trim() || isTyping}
+                      className="p-2.5 rounded-xl bg-gradient-to-r from-[#e91e8c] to-[#f06ab3] text-white hover:shadow-lg hover:shadow-[#e91e8c]/30 hover:scale-105 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Prompts */}
+              <div>
+                <p className="text-white/30 text-xs text-center mb-3 uppercase tracking-widest">Quick start prompts</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {QUICK_PROMPTS.map(({ icon, text }) => (
+                    <button
+                      key={text}
+                      onClick={() => void sendMessage(text)}
+                      disabled={isTyping}
+                      className="glass text-left px-4 py-3 rounded-xl text-white/60 text-sm hover:text-white hover:border-[#e91e8c]/20 hover:bg-[#e91e8c]/5 transition-all duration-200 disabled:opacity-40"
+                    >
+                      <span className="mr-2">{icon}</span>
+                      {text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )

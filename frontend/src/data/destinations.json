@@ -757,5 +757,164 @@
       { "name": "La Mar Salada", "cuisine": "Catalan Seafood", "priceRange": "Mid-range", "rating": 4.7, "specialty": "Black rice, grilled calamari, fresh seafood paella", "location": "Barceloneta" },
       { "name": "Bar Cañete", "cuisine": "Traditional Catalan Tapas", "priceRange": "Mid-range", "rating": 4.8, "specialty": "Croquetas, Spanish omelette, anchovies", "location": "El Raval" }
     ]
+  },
+  {
+    "id": "bangkok",
+    "name": "Bangkok",
+    "country": "Thailand",
+    "aliases": ["bangkok", "thailand", "thai", "phuket", "chiang mai", "pattaya", "koh samui", "krabi", "thai land"],
+    "type": "Cultural",
+    "region": "Southeast Asia",
+    "baseCostPKR": 150000,
+    "weather": "Tropical — hot and humid year-round, monsoon Jun–Oct",
+    "best_season": "November – February",
+    "language": "Thai",
+    "timezone": "ICT (UTC+7)",
+    "tipping": "Not mandatory but appreciated — round up the bill",
+    "transportation": "BTS Skytrain, MRT subway, tuk-tuks, taxis, river ferries",
+    "safety_rating": 4.2,
+    "user_rating": 4.7,
+    "highlights": [
+      "Grand Palace & Wat Phra Kaew — Bangkok's most spectacular royal complex",
+      "Wat Arun — the iconic Temple of Dawn on the Chao Phraya River",
+      "Chatuchak Weekend Market — one of the world's largest markets with 15,000 stalls",
+      "Yaowarat Chinatown — Bangkok's legendary street food paradise"
+    ],
+    "dayTitles": [
+      "Arrival & Riverside Temples",
+      "Grand Palace & Wat Pho",
+      "Floating Market & Canals",
+      "Street Food & Chatuchak Market",
+      "Ayutthaya Ancient City Day Trip",
+      "Shopping & Night Markets",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Grand Palace Tour", "time": "09:00", "duration": "3 hours", "costPKR": 5600, "category": "Sightseeing", "description": "Marvel at the dazzling Grand Palace complex, home to the sacred Emerald Buddha and centuries of royal history", "slot": "morning" },
+      { "name": "Wat Pho Reclining Buddha", "time": "13:00", "duration": "1.5 hours", "costPKR": 1400, "category": "Culture", "description": "See the magnificent 46-meter gold reclining Buddha and receive a traditional Thai massage at this ancient temple", "slot": "afternoon" },
+      { "name": "Chao Phraya Sunset Cruise", "time": "17:00", "duration": "2 hours", "costPKR": 4200, "category": "Relaxation", "description": "Dinner cruise along Bangkok's iconic river, passing illuminated temples and the glittering skyline at dusk", "slot": "evening" },
+      { "name": "Damnoen Saduak Floating Market", "time": "07:00", "duration": "3 hours", "costPKR": 5600, "category": "Culture", "description": "Explore the vibrant floating market by longboat, sampling tropical fruits and traditional Thai snacks from canal vendors", "slot": "morning" },
+      { "name": "Chatuchak Weekend Market", "time": "10:00", "duration": "3 hours", "costPKR": 1000, "category": "Shopping", "description": "Browse one of the world's largest markets — 15,000 stalls of antiques, street food, fashion, and local crafts", "slot": "morning" },
+      { "name": "Yaowarat Chinatown Food Tour", "time": "18:00", "duration": "3 hours", "costPKR": 2800, "category": "Food", "description": "Guided street food walk through Bangkok's famous Chinatown — dim sum, roast duck, mango sticky rice, and pad thai", "slot": "evening" },
+      { "name": "Muay Thai Evening Show", "time": "20:00", "duration": "2.5 hours", "costPKR": 8400, "category": "Entertainment", "description": "Watch an electrifying live Muay Thai boxing match at Rajadamnern Stadium — Thailand's national sport at its best", "slot": "evening" },
+      { "name": "Wat Arun Sunrise Visit", "time": "06:30", "duration": "2 hours", "costPKR": 1400, "category": "Sightseeing", "description": "Catch the golden sunrise over the iconic Temple of Dawn — one of Bangkok's most photographed landmarks", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "Mandarin Oriental Bangkok", "stars": 5, "pricePerNightPKR": 45000, "description": "Legendary riverside luxury hotel, one of the world's finest since 1876" },
+      { "name": "Novotel Bangkok Silom", "stars": 4, "pricePerNightPKR": 15000, "description": "Modern hotel in Bangkok's business district with rooftop pool" },
+      { "name": "Lub d Bangkok Silom", "stars": 3, "pricePerNightPKR": 7000, "description": "Trendy boutique hostel with private rooms, popular with backpackers" }
+    ],
+    "restaurants": [
+      { "name": "Jay Fai", "cuisine": "Thai Street Food", "priceRange": "Mid-range", "rating": 4.9, "specialty": "Michelin-starred crab omelette and dry Tom Yum", "location": "Maha Chai Road, Old City" },
+      { "name": "Pai Kha Floating Restaurant", "cuisine": "Thai Seafood", "priceRange": "Mid-range", "rating": 4.6, "specialty": "Fresh river prawns and tom yum soup on the Chao Phraya", "location": "Rattanakosin Island" },
+      { "name": "T&K Seafood Yaowarat", "cuisine": "Thai-Chinese", "priceRange": "Budget", "rating": 4.7, "specialty": "Grilled river prawns, crab curry, and roast duck", "location": "Yaowarat Chinatown" },
+      { "name": "Gaggan Anand", "cuisine": "Progressive Indian-Thai", "priceRange": "Upscale", "rating": 4.9, "specialty": "Asia's best restaurant — progressive emoji tasting menu", "location": "Lang Suan Road" }
+    ]
+  },
+  {
+    "id": "tokyo",
+    "name": "Tokyo",
+    "country": "Japan",
+    "aliases": ["tokyo", "japan", "japanese", "kyoto", "osaka", "hiroshima", "nara", "japani", "nippon", "shibuya", "shinjuku", "akihabara"],
+    "type": "Cultural",
+    "region": "East Asia",
+    "baseCostPKR": 350000,
+    "weather": "Four seasons — cherry blossoms in spring, humid summers, colorful autumn, cold winters",
+    "best_season": "March–May (cherry blossoms) or October–November",
+    "language": "Japanese",
+    "timezone": "JST (UTC+9)",
+    "tipping": "Tipping is considered rude in Japan — never tip",
+    "transportation": "Tokyo Metro, JR trains, Shinkansen bullet train, buses, taxis",
+    "safety_rating": 5.0,
+    "user_rating": 4.9,
+    "highlights": [
+      "Senso-ji Temple Asakusa — Tokyo's oldest and most iconic Buddhist temple, dating to 645 AD",
+      "Shibuya Crossing — the world's busiest pedestrian crossing, a true Tokyo landmark",
+      "Tsukiji Outer Market — the world's freshest sushi breakfast experience",
+      "Akihabara Electric Town — anime, manga, and electronics paradise"
+    ],
+    "dayTitles": [
+      "Arrival & Shinjuku Orientation",
+      "Asakusa Temples & Senso-ji",
+      "Shibuya & Harajuku Fashion",
+      "Akihabara & Ginza Shopping",
+      "Day Trip to Nikko or Mt. Fuji",
+      "Tsukiji Market & Digital Art",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Senso-ji Temple Morning Visit", "time": "08:00", "duration": "2.5 hours", "costPKR": 0, "category": "Culture", "description": "Explore Tokyo's oldest temple with the iconic Kaminarimon Thunder Gate and Nakamise shopping street — arrive early to beat the crowds", "slot": "morning" },
+      { "name": "Shibuya Crossing Night Experience", "time": "20:00", "duration": "1.5 hours", "costPKR": 0, "category": "Sightseeing", "description": "Stand at the world-famous scramble crossing — best experienced at night when thousands cross simultaneously in a dazzling light show", "slot": "evening" },
+      { "name": "Tsukiji Outer Market Breakfast", "time": "07:00", "duration": "2 hours", "costPKR": 2800, "category": "Food", "description": "Have the freshest sushi, tamagoyaki and tuna sashimi at the famous Tsukiji outer market stalls — a Tokyo bucket-list experience", "slot": "morning" },
+      { "name": "teamLab Borderless Digital Art", "time": "10:00", "duration": "3 hours", "costPKR": 8400, "category": "Art", "description": "Walk through breathtaking immersive digital art installations — one of Tokyo's most unique and unmissable experiences", "slot": "morning" },
+      { "name": "Akihabara Anime & Tech Tour", "time": "14:00", "duration": "3 hours", "costPKR": 1400, "category": "Shopping", "description": "Explore Tokyo's electronics and anime district — multi-floor anime stores, retro game shops, and the latest gadgets", "slot": "afternoon" },
+      { "name": "Harajuku Takeshita Street", "time": "13:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Stroll through Tokyo's fashion capital, try crepes and cotton candy, and witness the iconic Harajuku street fashion subculture", "slot": "afternoon" },
+      { "name": "Tokyo Skytree Observation Deck", "time": "17:00", "duration": "2 hours", "costPKR": 5600, "category": "Sightseeing", "description": "Stunning 360° panoramic views of Tokyo from the world's second-tallest structure — magical at sunset and after dark", "slot": "evening" },
+      { "name": "Ramen & Izakaya Night", "time": "19:00", "duration": "2.5 hours", "costPKR": 3500, "category": "Food", "description": "Authentic tonkotsu ramen in a tiny traditional shop, followed by drinks and yakitori skewers at a local izakaya (Japanese pub)", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "The Peninsula Tokyo", "stars": 5, "pricePerNightPKR": 70000, "description": "Ultra-luxury hotel with stunning views of the Imperial Palace gardens — impeccable Japanese service" },
+      { "name": "Shibuya Excel Hotel Tokyu", "stars": 4, "pricePerNightPKR": 28000, "description": "Directly connected to Shibuya station — the best location in Tokyo, above the famous crossing" },
+      { "name": "Khaosan Tokyo Kabuki", "stars": 3, "pricePerNightPKR": 9000, "description": "Beloved hostel in Asakusa near Senso-ji — great location and social atmosphere for solo travelers" }
+    ],
+    "restaurants": [
+      { "name": "Ichiran Ramen Shibuya", "cuisine": "Tonkotsu Ramen", "priceRange": "Budget", "rating": 4.7, "specialty": "Solo dining booths, customizable tonkotsu ramen broth", "location": "Shibuya, Tokyo" },
+      { "name": "Tsuta Ramen", "cuisine": "Soy Sauce Ramen", "priceRange": "Mid-range", "rating": 4.8, "specialty": "World's first Michelin-starred ramen — truffle soy sauce broth", "location": "Sugamo, Tokyo" },
+      { "name": "Sushi Saito", "cuisine": "Omakase Sushi", "priceRange": "Upscale", "rating": 5.0, "specialty": "3-Michelin-star omakase — widely considered the best sushi in the world", "location": "Minato, Tokyo" },
+      { "name": "Gonpachi Nishi-Azabu", "cuisine": "Japanese Izakaya", "priceRange": "Mid-range", "rating": 4.6, "specialty": "The 'Kill Bill' restaurant — yakitori, soba noodles, Japanese sake", "location": "Nishi-Azabu, Tokyo" }
+    ]
+  },
+  {
+    "id": "singapore",
+    "name": "Singapore",
+    "country": "Singapore",
+    "aliases": ["singapore", "singaporean", "sg", "sing", "marina bay", "sentosa"],
+    "type": "Luxury",
+    "region": "Southeast Asia",
+    "baseCostPKR": 200000,
+    "weather": "Tropical — hot and humid year-round with occasional showers",
+    "best_season": "February – April (driest months)",
+    "language": "English, Mandarin, Malay, Tamil",
+    "timezone": "SGT (UTC+8)",
+    "tipping": "Not expected — service charge usually included in bills",
+    "transportation": "MRT (Mass Rapid Transit), buses, Grab taxis, walking",
+    "safety_rating": 5.0,
+    "user_rating": 4.8,
+    "highlights": [
+      "Marina Bay Sands — iconic rooftop infinity pool and skyline views",
+      "Gardens by the Bay — futuristic Supertree Grove light show at night",
+      "Hawker Centre food culture — 50+ dishes under one roof from $2",
+      "Sentosa Island — beaches, Universal Studios, cable car rides"
+    ],
+    "dayTitles": [
+      "Arrival & Marina Bay",
+      "Gardens by the Bay & Supertrees",
+      "Chinatown & Little India Cultural Walk",
+      "Sentosa Island & Universal Studios",
+      "Orchard Road Shopping & Hawker Food",
+      "Zoo & Night Safari",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Marina Bay Sands SkyPark", "time": "18:00", "duration": "2 hours", "costPKR": 7000, "category": "Sightseeing", "description": "Stunning 360° views of Singapore from the famous rooftop observation deck — best at sunset", "slot": "evening" },
+      { "name": "Gardens by the Bay Night Show", "time": "19:45", "duration": "1 hour", "costPKR": 4200, "category": "Entertainment", "description": "Spectacular Garden Rhapsody light and sound show among the 50-meter illuminated Supertrees — free to watch from outside", "slot": "evening" },
+      { "name": "Chinatown Heritage Walk", "time": "09:00", "duration": "2.5 hours", "costPKR": 1400, "category": "Culture", "description": "Explore Singapore's historic Chinatown with temples, clan houses, and some of the best hawker food on the island", "slot": "morning" },
+      { "name": "Universal Studios Singapore", "time": "10:00", "duration": "6 hours", "costPKR": 16800, "category": "Entertainment", "description": "Southeast Asia's only Universal Studios — seven themed zones, thrill rides, and live shows on Sentosa Island", "slot": "morning" },
+      { "name": "Singapore Zoo Morning Feeding", "time": "08:00", "duration": "3 hours", "costPKR": 8400, "category": "Nature", "description": "World-famous open-concept zoo where animals roam freely — iconic breakfast with orangutans experience", "slot": "morning" },
+      { "name": "Hawker Centre Food Tour", "time": "12:00", "duration": "2 hours", "costPKR": 1400, "category": "Food", "description": "Sample Singapore's UNESCO-recognized hawker culture — chicken rice, laksa, char kway teow, chilli crab at Maxwell or Lau Pa Sat", "slot": "afternoon" },
+      { "name": "Little India & Arab Street Walk", "time": "10:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Wander through colorful Little India and Arab Street, visiting Sri Veeramakaliamman Temple and Masjid Sultan Mosque", "slot": "morning" },
+      { "name": "Sentosa Beach & Cable Car", "time": "14:00", "duration": "3 hours", "costPKR": 5600, "category": "Relaxation", "description": "Relax on Palawan or Siloso Beach followed by a scenic cable car ride over the sea to Mount Faber", "slot": "afternoon" }
+    ],
+    "hotels": [
+      { "name": "Marina Bay Sands Hotel", "stars": 5, "pricePerNightPKR": 84000, "description": "The world-famous infinity pool hotel — an icon of Singapore's skyline" },
+      { "name": "Naumi Hotel Singapore", "stars": 4, "pricePerNightPKR": 28000, "description": "Boutique luxury hotel in the heart of the city near Raffles Place" },
+      { "name": "Wink Hostel", "stars": 3, "pricePerNightPKR": 8400, "description": "Award-winning capsule and private room hostel near Chinatown MRT" }
+    ],
+    "restaurants": [
+      { "name": "Lau Pa Sat Hawker Centre", "cuisine": "Singapore Hawker Food", "priceRange": "Budget", "rating": 4.6, "specialty": "Satay, chicken rice, char kway teow, laksa — Singapore classics", "location": "Shenton Way, CBD" },
+      { "name": "Jumbo Seafood Clarke Quay", "cuisine": "Singapore Chilli Crab", "priceRange": "Mid-range", "rating": 4.7, "specialty": "Iconic chilli crab and black pepper crab — Singapore's national dish", "location": "Clarke Quay Riverside" },
+      { "name": "Din Tai Fung Marina Bay", "cuisine": "Taiwanese Dim Sum", "priceRange": "Mid-range", "rating": 4.8, "specialty": "World-famous xiao long bao (soup dumplings) — Michelin Bib Gourmand", "location": "Marina Bay Link Mall" },
+      { "name": "Violet Oon Singapore", "cuisine": "Peranakan Cuisine", "priceRange": "Upscale", "rating": 4.7, "specialty": "Authentic Nonya laksa, beef rendang, and kueh desserts", "location": "National Gallery Singapore" }
+    ]
   }
 ]

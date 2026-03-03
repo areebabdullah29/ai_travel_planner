@@ -78,4 +78,5 @@ export interface TripPlan {
 export interface SavedTrip extends TripPlan {
   savedAt: string
   status: 'planned' | 'ongoing' | 'completed'
+  _backendId?: string  // MongoDB _id from backend, used for sync operations
 }

@@ -226,11 +226,98 @@ function pkrToDisplay(pkrAmount: number, currency: string): number {
   return Math.round(pkrAmount * (rates[currency] ?? 1))
 }
 
+// ── Generic destination builder (for cities not in destinations.json) ───────
+function buildGenericDestination(name: string, preferences: TripPreferences): Destination {
+  const parts = name.split(',')
+  const city = parts[0].trim()
+  const country = parts[1]?.trim() || city
+  const style = (preferences.travelStyle || 'Mixed').toLowerCase()
+
+  const adventureActs: DestActivity[] = [
+    { name: `${city} Guided Hiking Trail`, time: '08:00', duration: '4 hours', costPKR: 3500, category: 'Adventure', description: `Guided trek through ${country}'s stunning natural landscapes with panoramic views`, slot: 'morning' },
+    { name: `${city} Nature & Wildlife Tour`, time: '14:00', duration: '3 hours', costPKR: 4200, category: 'Adventure', description: `Explore ${city}'s scenic nature reserves and spot local wildlife with an expert guide`, slot: 'afternoon' },
+    { name: `${city} Rock Climbing & Rappelling`, time: '09:00', duration: '3 hours', costPKR: 5000, category: 'Adventure', description: `Beginner-friendly rock climbing experience at ${city}'s famous cliffs and natural formations`, slot: 'morning' },
+    { name: `${city} White-water Rafting`, time: '10:00', duration: '3 hours', costPKR: 6000, category: 'Adventure', description: `Thrilling rafting experience on ${country}'s scenic rivers — suitable for beginners`, slot: 'morning' },
+    { name: `${city} Sunset Viewpoint Trek`, time: '16:00', duration: '2.5 hours', costPKR: 1500, category: 'Adventure', description: `Evening hike to the best viewpoint above ${city} for golden hour and sunset panoramas`, slot: 'evening' },
+    { name: `${city} Local Village Walk`, time: '10:00', duration: '2 hours', costPKR: 1000, category: 'Culture', description: `Walk through traditional villages near ${city} and experience local rural life`, slot: 'morning' },
+    { name: `${city} Night Market & Street Food`, time: '18:00', duration: '2.5 hours', costPKR: 2000, category: 'Food', description: `Explore ${city}'s vibrant night market — street food, local crafts, and live entertainment`, slot: 'evening' },
+    { name: `${city} Zipline & Canopy Tour`, time: '13:00', duration: '2 hours', costPKR: 5600, category: 'Adventure', description: `Soar above ${city}'s canopy on a thrilling zipline experience with bird's-eye views`, slot: 'afternoon' },
+  ]
+  const culturalActs: DestActivity[] = [
+    { name: `${city} Old Town Heritage Walk`, time: '09:00', duration: '3 hours', costPKR: 2000, category: 'Sightseeing', description: `Guided walk through ${city}'s historic quarter — ancient streets, colonial buildings, and hidden gems`, slot: 'morning' },
+    { name: `${city} National Museum Visit`, time: '10:00', duration: '2.5 hours', costPKR: 1500, category: 'Culture', description: `Explore ${city}'s premier museum showcasing ${country}'s rich history, art, and cultural heritage`, slot: 'morning' },
+    { name: `${city} Sacred Temples & Shrines`, time: '08:30', duration: '3 hours', costPKR: 1000, category: 'Culture', description: `Visit the most sacred temples and spiritual sites in and around ${city} with a local guide`, slot: 'morning' },
+    { name: `${city} Traditional Cooking Class`, time: '11:00', duration: '3 hours', costPKR: 4000, category: 'Food', description: `Learn to cook authentic ${country} dishes from a local chef — ingredients, technique, and history`, slot: 'morning' },
+    { name: `${city} Cultural Evening Show`, time: '19:00', duration: '2 hours', costPKR: 3500, category: 'Entertainment', description: `Traditional dance, music, and cultural performance showcasing ${country}'s artistic heritage`, slot: 'evening' },
+    { name: `${city} Street Food Walk`, time: '18:00', duration: '2 hours', costPKR: 2000, category: 'Food', description: `Sample authentic local cuisine from ${city}'s famous food stalls and busy night market`, slot: 'evening' },
+    { name: `${city} Palace & Royal Site Tour`, time: '09:00', duration: '2.5 hours', costPKR: 2500, category: 'Sightseeing', description: `Tour the magnificent royal palace or iconic historic landmark that defines ${city}'s skyline`, slot: 'morning' },
+    { name: `${city} Bazaar & Local Shopping`, time: '15:00', duration: '2 hours', costPKR: 500, category: 'Shopping', description: `Browse ${city}'s colorful bazaar for unique souvenirs, handcrafts, and local specialties`, slot: 'afternoon' },
+  ]
+  const relaxActs: DestActivity[] = [
+    { name: `${city} Beach & Waterfront Day`, time: '09:00', duration: '5 hours', costPKR: 2000, category: 'Relaxation', description: `Relax on ${city}'s beautiful beaches or scenic waterfront with crystal-clear water and golden sand`, slot: 'morning' },
+    { name: `${city} Spa & Wellness Treatment`, time: '14:00', duration: '2.5 hours', costPKR: 5000, category: 'Relaxation', description: `Indulge in traditional ${country} spa treatments and therapeutic massages at a luxury wellness center`, slot: 'afternoon' },
+    { name: `${city} Sunset Boat Cruise`, time: '17:00', duration: '2 hours', costPKR: 4000, category: 'Relaxation', description: `Romantic sunset cruise along ${city}'s stunning coastline with drinks and panoramic sea views`, slot: 'evening' },
+    { name: `${city} Snorkeling & Marine Tour`, time: '10:00', duration: '3 hours', costPKR: 5000, category: 'Adventure', description: `Explore vibrant coral reefs and colorful marine life just off the coast of ${city}`, slot: 'morning' },
+    { name: `${city} Yoga & Meditation Retreat`, time: '07:00', duration: '1.5 hours', costPKR: 2000, category: 'Wellness', description: `Start each day with sunrise yoga and guided meditation in ${city}'s most scenic outdoor setting`, slot: 'morning' },
+    { name: `${city} Island Hopping Tour`, time: '09:00', duration: '6 hours', costPKR: 7000, category: 'Relaxation', description: `Full-day boat tour visiting the beautiful surrounding islands and hidden coves near ${city}`, slot: 'morning' },
+    { name: `${city} Local Market Morning`, time: '08:00', duration: '2 hours', costPKR: 1500, category: 'Culture', description: `Morning visit to ${city}'s fresh local market — tropical fruits, spices, and artisanal products`, slot: 'morning' },
+    { name: `${city} Seafood Dinner by the Water`, time: '19:00', duration: '2 hours', costPKR: 3500, category: 'Food', description: `Fresh seafood dinner at ${city}'s best waterfront restaurant with ocean views and local wine`, slot: 'evening' },
+  ]
+
+  const acts = style.includes('adventure') ? adventureActs : style.includes('relax') || style.includes('beach') ? relaxActs : culturalActs
+
+  return {
+    id: `generic-${city.toLowerCase().replace(/\s+/g, '-')}`,
+    name: city,
+    country,
+    aliases: [city.toLowerCase(), country.toLowerCase()],
+    type: style.includes('adventure') ? 'Adventure' : style.includes('relax') || style.includes('beach') ? 'Relaxation' : style.includes('luxury') ? 'Luxury' : 'Cultural',
+    region: country,
+    baseCostPKR: 120000,
+    weather: 'Varies by season — check local forecast before travel',
+    best_season: 'Year-round depending on preference',
+    language: 'Local language (English widely spoken in tourist areas)',
+    timezone: 'Local time — check before travel',
+    tipping: 'Check local customs — typically 5-15% at restaurants',
+    transportation: 'Taxis, ride-sharing apps, public transport, and walking',
+    safety_rating: 4.0,
+    user_rating: 4.3,
+    highlights: [
+      `Explore ${city}'s most iconic landmarks and hidden gems`,
+      `Immerse yourself in authentic ${country} culture and traditions`,
+      `Experience world-class cuisine and local street food`,
+      `Create unforgettable memories in one of ${country}'s finest destinations`,
+    ],
+    dayTitles: [
+      `Arrival & ${city} Orientation`,
+      `Iconic Landmarks & City Highlights`,
+      `Cultural Immersion Day`,
+      `Food, Markets & Local Experiences`,
+      `Adventure & Exploration`,
+      `Relaxation & Free Exploration`,
+      `Departure Day`,
+    ],
+    activities: acts,
+    hotels: [
+      { name: `${city} Grand Hotel`, stars: 5, pricePerNightPKR: 25000, description: `Premium hotel with excellent facilities and central location in ${city}` },
+      { name: `${city} Central Hotel`, stars: 4, pricePerNightPKR: 12000, description: `Comfortable mid-range hotel in the heart of ${city} with great amenities` },
+      { name: `${city} Budget Inn`, stars: 3, pricePerNightPKR: 5500, description: `Clean and affordable accommodation perfect for budget travelers` },
+    ],
+    restaurants: [
+      { name: `${city} Traditional Kitchen`, cuisine: `Authentic ${country}`, priceRange: 'Mid-range', rating: 4.5, specialty: `Signature local dishes and traditional ${country} cuisine`, location: `${city} city center` },
+      { name: `${city} Street Food Market`, cuisine: 'Street Food', priceRange: 'Budget', rating: 4.6, specialty: `Variety of local street snacks and ${country} specialties`, location: `${city} old town` },
+      { name: `The ${city} Bistro`, cuisine: 'International & Local', priceRange: 'Mid-range', rating: 4.4, specialty: `Creative fusion of local flavors and international favorites`, location: `Tourist district, ${city}` },
+      { name: `${city} Night Market`, cuisine: 'Various', priceRange: 'Budget', rating: 4.7, specialty: `Best variety of ${country} dishes all in one place`, location: `${city} night market` },
+    ],
+  }
+}
+
 // ── Mock plan generator — uses destinations.json ───────────────────────────
 export function generateMockPlan(preferences: TripPreferences, destinationName?: string): TripPlan {
   const currency = preferences.currency || 'PKR'
   const days = preferences.duration || 7
-  const dest = findDestination(destinationName ?? '') ?? destinations[0]
+  const found = findDestination(destinationName ?? '')
+  const dest = found ?? (destinationName?.trim() ? buildGenericDestination(destinationName, preferences) : destinations[0])
 
   // Scale base cost: destination's 5-day base → user's duration
   const basePKR = dest.baseCostPKR
