@@ -4,8 +4,12 @@ import { motion } from 'framer-motion'
 import {
   Sparkles, MapPin, DollarSign, Clock, CloudSun,
   Utensils, Compass, ArrowRight,
-  Star, Globe, Zap, Search, Send
+  Star, Globe, Zap, Search, Send, Wind, Droplets, Eye
 } from 'lucide-react'
+import {
+  fetchWeather, weatherEmoji, weatherIconUrl, getWeatherAdvisory,
+  type WeatherData,
+} from '@/services/weatherService'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -17,19 +21,19 @@ const fadeUp = {
 }
 
 const destinations = [
-  { name: 'Bali, Indonesia', tag: 'Relaxation', days: '7 days', cost: 'Rs 3,36,000', img: '🌴', color: '#4cc9f0' },
-  { name: 'Tokyo, Japan', tag: 'Culture', days: '10 days', cost: 'Rs 7,84,000', img: '🗼', color: '#ffd166' },
-  { name: 'Hunza Valley', tag: 'Adventure', days: '5 days', cost: 'Rs 1,12,000', img: '🏔️', color: '#e91e8c' },
-  { name: 'Paris, France', tag: 'Romantic', days: '6 days', cost: 'Rs 5,88,000', img: '🗺️', color: '#06d6a0' },
-  { name: 'Safari, Kenya', tag: 'Wildlife', days: '8 days', cost: 'Rs 9,80,000', img: '🦁', color: '#ffd166' },
-  { name: 'Santorini, Greece', tag: 'Scenic', days: '5 days', cost: 'Rs 5,04,000', img: '⛵', color: '#4cc9f0' },
+  { name: 'Bali, Indonesia',   tag: 'Relaxation', days: 7,  budget: 336000,  img: '🌴', color: '#4cc9f0' },
+  { name: 'Tokyo, Japan',      tag: 'Culture',    days: 10, budget: 784000,  img: '🗼', color: '#ffd166' },
+  { name: 'Hunza Valley',      tag: 'Adventure',  days: 5,  budget: 112000,  img: '🏔️', color: '#e91e8c' },
+  { name: 'Paris, France',     tag: 'Romantic',   days: 6,  budget: 588000,  img: '🗺️', color: '#06d6a0' },
+  { name: 'Safari, Kenya',     tag: 'Wildlife',   days: 8,  budget: 980000,  img: '🦁', color: '#ffd166' },
+  { name: 'Santorini, Greece', tag: 'Scenic',     days: 5,  budget: 504000,  img: '⛵', color: '#4cc9f0' },
 ]
 
 const features = [
   {
     icon: Sparkles,
     title: 'AI-Powered Planning',
-    desc: 'Claude AI generates personalized itineraries based on your unique preferences, budget, and travel style.',
+    desc: 'AI generates personalized itineraries based on your unique preferences, budget, and travel style.',
     color: '#e91e8c'
   },
   {
@@ -82,15 +86,43 @@ const HERO_CHIPS = [
   { label: '🦁 African Safari', query: 'African safari for 8 days' },
 ]
 
+const WEATHER_CITIES = [
+  { query: 'Karachi', label: 'Karachi', country: 'Pakistan', iso: 'pk' },
+  { query: 'London', label: 'London', country: 'United Kingdom', iso: 'gb' },
+  { query: 'Bangkok', label: 'Bangkok', country: 'Thailand', iso: 'th' },
+  { query: 'Washington DC', label: 'Washington', country: 'United States', iso: 'us' },
+]
+
+const flagUrl = (iso: string) =>
+  `https://hatscripts.github.io/circle-flags/flags/${iso}.svg`
+
 export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const navigate = useNavigate()
+  const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>({})
+  const [weatherLoading, setWeatherLoading] = useState(true)
 
   const handleSearch = (query?: string) => {
     const q = (query ?? searchQuery).trim()
     if (q) navigate('/plan', { state: { initialQuery: q } })
   }
+
+  useEffect(() => {
+    const loadWeather = async () => {
+      setWeatherLoading(true)
+      const results = await Promise.all(
+        WEATHER_CITIES.map(({ query, label }) =>
+          fetchWeather(query).then(d => ({ key: label, d }))
+        )
+      )
+      const map: Record<string, WeatherData> = {}
+      results.forEach(({ key, d }) => { if (d) map[key] = d })
+      setWeatherData(map)
+      setWeatherLoading(false)
+    }
+    loadWeather()
+  }, [])
 
   useEffect(() => {
     const hero = heroRef.current
@@ -202,13 +234,14 @@ export default function Home() {
           animate={{ y: [0, -10, 0] }}
           transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
+          <Link to="/plan" state={{ initialQuery: 'Plan a 10 day trip to Tokyo, Japan with a budget of 784000 PKR' }}
+            className="glass rounded-2xl px-4 py-3 flex items-center gap-3 hover:border-[#ffd166]/30 transition-colors cursor-pointer">
             <span className="text-2xl">🗼</span>
             <div>
               <div className="text-white text-sm font-semibold">Tokyo, Japan</div>
               <div className="text-white/40 text-xs">10 days · Rs 7,84,000</div>
             </div>
-          </div>
+          </Link>
         </motion.div>
 
         <motion.div
@@ -216,13 +249,14 @@ export default function Home() {
           animate={{ y: [0, 10, 0] }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         >
-          <div className="glass rounded-2xl px-4 py-3 flex items-center gap-3">
+          <Link to="/plan" state={{ initialQuery: 'Plan a 5 day trip to Hunza Valley with a budget of 112000 PKR' }}
+            className="glass rounded-2xl px-4 py-3 flex items-center gap-3 hover:border-[#e91e8c]/30 transition-colors cursor-pointer">
             <span className="text-2xl">🏔️</span>
             <div>
               <div className="text-white text-sm font-semibold">Hunza Valley</div>
               <div className="text-white/40 text-xs">5 days · Rs 1,12,000</div>
             </div>
-          </div>
+          </Link>
         </motion.div>
 
         {/* Scroll indicator */}
@@ -257,6 +291,102 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── LIVE WEATHER ── */}
+      <section className="py-14 px-4 sm:px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+            className="flex items-end justify-between mb-8"
+          >
+            <div>
+              <span className="text-[#4cc9f0] text-sm font-semibold tracking-widest uppercase">Live Weather</span>
+              <h2 className="font-display text-3xl font-bold text-white mt-1">
+                Current conditions worldwide
+              </h2>
+            </div>
+            <CloudSun size={28} className="text-[#4cc9f0] hidden sm:block" />
+          </motion.div>
+
+          {weatherLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {WEATHER_CITIES.map(({ label }) => (
+                <div key={label} className="glass rounded-2xl p-5 animate-pulse">
+                  <div className="h-4 bg-white/10 rounded mb-3 w-2/3" />
+                  <div className="h-8 bg-white/10 rounded mb-2 w-1/2" />
+                  <div className="h-3 bg-white/10 rounded w-3/4" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {WEATHER_CITIES.map(({ label, country, iso }, i) => {
+                const w = weatherData[label]
+                const advisory = w ? getWeatherAdvisory(w.description, w.temp) : null
+                return (
+                  <motion.div
+                    key={label}
+                    custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                    className="glass rounded-2xl p-5 hover:bg-white/5 transition-all"
+                  >
+                    {w ? (
+                      <>
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <div className="text-white font-bold text-base leading-tight">{label}</div>
+                            <div className="text-white/40 text-xs mt-0.5">{country}</div>
+                          </div>
+                          <img
+                            src={flagUrl(iso)}
+                            alt={country}
+                            className="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-white/10"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xl">{weatherEmoji(w.description)}</span>
+                          <span className="font-display text-4xl font-extrabold text-white">{w.temp}°</span>
+                          <span className="text-white/40 text-sm">C</span>
+                        </div>
+                        <div className="text-white/60 text-sm mb-3">{w.description}</div>
+                        <div className="grid grid-cols-3 gap-2 text-xs text-white/40">
+                          <div className="flex flex-col items-center gap-1">
+                            <Droplets size={12} className="text-[#4cc9f0]" />
+                            <span>{w.humidity}%</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <Wind size={12} className="text-[#06d6a0]" />
+                            <span>{w.wind_speed}m/s</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-1">
+                            <Eye size={12} className="text-[#ffd166]" />
+                            <span>{w.visibility}km</span>
+                          </div>
+                        </div>
+                        {advisory && (
+                          <div className="mt-3 px-2 py-1.5 rounded-lg bg-[#ffd166]/10 border border-[#ffd166]/20 text-[#ffd166] text-xs">
+                            ⚠ {advisory}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-6 gap-2">
+                        <img
+                          src={flagUrl(iso)}
+                          alt={country}
+                          className="w-11 h-11 rounded-full object-cover border border-white/10"
+                        />
+                        <div className="text-white font-bold text-sm">{label}</div>
+                        <div className="text-white/30 text-xs">{country}</div>
+                        <div className="text-white/20 text-xs">Loading…</div>
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ── */}
       <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
@@ -277,7 +407,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-8">
               {[
                 { step: '01', icon: '💬', title: 'Chat with AI', desc: 'Tell our AI your budget, travel dates, interests, and preferred weather. It asks smart questions to understand your dream trip.' },
-                { step: '02', icon: '🤖', title: 'AI Generates Plan', desc: 'Claude AI analyzes your preferences and creates a complete, personalized itinerary with costs, restaurants, and activities.' },
+                { step: '02', icon: '🤖', title: 'AI Generates Plan', desc: 'AI analyzes your preferences and creates a complete, personalized itinerary with costs, restaurants, and activities.' },
                 { step: '03', icon: '✈️', title: 'Travel & Explore', desc: 'Download your itinerary, save trips to your dashboard, and head off on your perfectly planned adventure.' },
               ].map(({ step, icon, title, desc }, i) => (
                 <motion.div
@@ -359,7 +489,10 @@ export default function Home() {
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {destinations.map(({ name, tag, days, cost, img, color }, i) => (
+            {destinations.map(({ name, tag, days, budget, img, color }, i) => {
+              const costDisplay = `Rs ${budget.toLocaleString('en-PK')}`
+              const planQuery = `Plan a ${days} day trip to ${name} with a budget of ${budget} PKR`
+              return (
               <motion.div
                 key={name}
                 custom={i} variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -390,13 +523,14 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-white/40 text-sm">
-                    <span className="flex items-center gap-1.5"><Clock size={13} />{days}</span>
-                    <span className="flex items-center gap-1.5">{cost}</span>
+                    <span className="flex items-center gap-1.5"><Clock size={13} />{days} days</span>
+                    <span className="flex items-center gap-1.5">{costDisplay}</span>
                   </div>
                 </div>
 
                 <Link
                   to="/plan"
+                  state={{ initialQuery: planQuery }}
                   className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
                   style={{ background: 'rgba(8, 13, 26, 0.85)' }}
                 >
@@ -406,7 +540,7 @@ export default function Home() {
                   </span>
                 </Link>
               </motion.div>
-            ))}
+            )})}
           </div>
         </div>
       </section>

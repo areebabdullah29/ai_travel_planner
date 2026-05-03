@@ -3,12 +3,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send, Sparkles, Plane, RefreshCw, Zap, RotateCcw,
-  MapPin, Clock, Users, Thermometer, Heart, Coins, Search
+  MapPin, Clock, Users, Thermometer, Heart, Coins, Search,
+  Maximize2, Minimize2
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import {
   TRAVEL_SYSTEM_PROMPT,
   parsePreferencesFromResponse,
+  generateTripPlan,
   generateMockPlan,
 } from '@/services/claudeService'
 import type { Message } from '@/types'
@@ -96,13 +98,16 @@ export default function TripPlanner() {
   const [extractedPreferences, setExtractedPreferences] = useState<ReturnType<typeof parsePreferencesFromResponse> | null>(null)
   const [conversationHistory, setConversationHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
   const [selectedCurrency, setSelectedCurrency] = useState('PKR')
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const initialQuerySentRef = useRef(false)
-  // Tracks the destination the user mentioned across all conversation turns
+  // Tracks the destination, days, and budget across all conversation turns
   const detectedDestinationRef = useRef<{ dest: string; style: string; interests: string[] } | null>(null)
+  const detectedDaysRef = useRef<number | null>(null)
+  const detectedBudgetRef = useRef<number | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
   const { setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory } = useTripContext()
@@ -125,6 +130,8 @@ export default function TripPlanner() {
     const wkMatch = userMessage.match(/\b(\d+)\s*week/i)
     const dayMatch = userMessage.match(/\b(\d+)\s*(?:day|days|night|nights)\b/i)
     const extractedDays = wkMatch ? +wkMatch[1] * 7 : dayMatch ? +dayMatch[1] : null
+    if (extractedDays) detectedDaysRef.current = extractedDays
+    const knownDays = extractedDays ?? detectedDaysRef.current
 
     // ── Extract budget from message ───────────────────────────────────────────
     const cleanText = userMessage.replace(/,/g, '')
@@ -137,6 +144,42 @@ export default function TripPlanner() {
       : curBudget ? +curBudget[1]
       : wordBudget ? +wordBudget[1]
       : null
+    if (extractedBudget) detectedBudgetRef.current = extractedBudget
+    const knownBudget = extractedBudget ?? detectedBudgetRef.current
+
+    // ── Multi-city detection (checked BEFORE the single-city DEST_MAP) ─────────
+    const multiCity: DestInfo | null = (() => {
+      // Thailand combinations
+      if (msg.includes('pattaya') && msg.includes('bangkok'))
+        return { dest: 'Bangkok & Pattaya, Thailand',  style: 'Mixed',      interests: ['culture', 'food', 'beach', 'nightlife'], minPerDayPKR: 22000 }
+      if (msg.includes('phuket') && msg.includes('bangkok'))
+        return { dest: 'Bangkok & Phuket, Thailand',   style: 'Mixed',      interests: ['culture', 'food', 'beach'],              minPerDayPKR: 25000 }
+      if (msg.includes('phuket') && msg.includes('chiang mai'))
+        return { dest: 'Phuket & Chiang Mai, Thailand',style: 'Mixed',      interests: ['beach', 'culture', 'food'],              minPerDayPKR: 22000 }
+      if (msg.includes('pattaya') && msg.includes('chiang mai'))
+        return { dest: 'Pattaya & Chiang Mai, Thailand',style: 'Mixed',     interests: ['beach', 'culture', 'food'],              minPerDayPKR: 20000 }
+      // Japan combinations
+      if (msg.includes('tokyo') && msg.includes('kyoto') && msg.includes('osaka'))
+        return { dest: 'Tokyo, Kyoto & Osaka, Japan',  style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 48000 }
+      if (msg.includes('tokyo') && msg.includes('kyoto'))
+        return { dest: 'Tokyo & Kyoto, Japan',         style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 46000 }
+      if (msg.includes('tokyo') && msg.includes('osaka'))
+        return { dest: 'Tokyo & Osaka, Japan',         style: 'Cultural',   interests: ['culture', 'food', 'technology'],         minPerDayPKR: 46000 }
+      // UAE combinations
+      if (msg.includes('dubai') && msg.includes('abu dhabi'))
+        return { dest: 'Dubai & Abu Dhabi, UAE',       style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'],    minPerDayPKR: 55000 }
+      // Pakistan combinations
+      if (msg.includes('hunza') && msg.includes('skardu'))
+        return { dest: 'Hunza & Skardu, Pakistan',     style: 'Adventure',  interests: ['trekking', 'mountains', 'nature'],       minPerDayPKR: 9000  }
+      if (msg.includes('lahore') && msg.includes('islamabad'))
+        return { dest: 'Lahore & Islamabad, Pakistan', style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 7000  }
+      // Europe combinations
+      if (msg.includes('paris') && msg.includes('rome'))
+        return { dest: 'Paris & Rome',                 style: 'Cultural',   interests: ['culture', 'food', 'art'],                minPerDayPKR: 50000 }
+      if (msg.includes('paris') && msg.includes('barcelona'))
+        return { dest: 'Paris & Barcelona',            style: 'Cultural',   interests: ['culture', 'food', 'architecture'],       minPerDayPKR: 48000 }
+      return null
+    })()
 
     // ── Inline destination detection ──────────────────────────────────────────
     const DEST_MAP: Array<{ kw: string[]; info: DestInfo }> = [
@@ -157,8 +200,13 @@ export default function TripPlanner() {
       { kw: ['greece', 'athens', 'santorini', 'mykonos'],                                    info: { dest: 'Athens, Greece',    style: 'Cultural',   interests: ['history', 'beaches', 'food'],          minPerDayPKR: 38000 } },
       { kw: ['pakistan', 'hunza', 'skardu', 'lahore', 'islamabad', 'swat', 'murree'],        info: { dest: 'Hunza Valley',      style: 'Adventure',  interests: ['trekking', 'mountains', 'nature'],     minPerDayPKR:  8000 } },
       { kw: ['maldives', 'maldive'],                                                          info: { dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'],   minPerDayPKR: 80000 } },
+      { kw: ['africa', 'safari', 'kenya', 'nairobi', 'masai mara', 'serengeti'],             info: { dest: 'Nairobi, Kenya',    style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'],        minPerDayPKR: 25000 } },
+      { kw: ['nepal', 'kathmandu', 'everest', 'pokhara'],                                    info: { dest: 'Kathmandu, Nepal',  style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'],    minPerDayPKR: 15000 } },
+      { kw: ['new york', 'nyc', 'manhattan', 'usa', 'america', 'united states'],             info: { dest: 'New York, USA',     style: 'Cultural',   interests: ['city', 'culture', 'food'],             minPerDayPKR: 55000 } },
+      { kw: ['australia', 'sydney', 'melbourne', 'brisbane'],                                info: { dest: 'Sydney, Australia', style: 'Mixed',      interests: ['beaches', 'culture', 'nature'],        minPerDayPKR: 50000 } },
     ]
-    const inlineDest = DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info
+    const inlineDest = multiCity
+      ?? DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info
       ?? (detectedDestinationRef.current as DestInfo | null)
 
     // ── Budget-to-PKR conversion (for minimum budget check) ──────────────────
@@ -185,24 +233,23 @@ export default function TripPlanner() {
 }
 \`\`\``
 
-    // ── Smart shortcut: all info in one message → validate budget → generate ──
-    if (extractedDays && extractedBudget && inlineDest) {
-      const budgetPKR   = Math.round(extractedBudget * (toPKR[cur] ?? 1))
+    // ── Smart shortcut: all info known (current + remembered) → validate budget → generate ──
+    if (knownDays && knownBudget && inlineDest) {
+      const budgetPKR   = Math.round(knownBudget * (toPKR[cur] ?? 1))
       const minPerDay   = inlineDest.minPerDayPKR ?? 20000
-      const minTotalPKR = minPerDay * extractedDays
+      const minTotalPKR = minPerDay * knownDays
       const minDisplay  = Math.round(minTotalPKR / (toPKR[cur] ?? 1))
       const ratio       = budgetPKR / minTotalPKR
 
       if (ratio < 0.5) {
-        // Budget is too low — warn clearly, don't generate yet
         const feasibleDays = Math.max(2, Math.floor(budgetPKR / minPerDay))
-        return `Hmm, **${extractedBudget.toLocaleString()} ${cur}** for **${extractedDays} days** in **${inlineDest.dest}** is quite tight — it won't comfortably cover flights, accommodation, meals, and activities. 😬
+        return `Hmm, **${knownBudget.toLocaleString()} ${cur}** for **${knownDays} days** in **${inlineDest.dest}** is quite tight — it won't comfortably cover flights, accommodation, meals, and activities. 😬
 
-For a decent **${extractedDays}-day** trip to ${inlineDest.dest}, the recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
+For a decent **${knownDays}-day** trip to ${inlineDest.dest}, the recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
 
 Here are your options:
 - 💰 **Increase your budget** to at least **${minDisplay.toLocaleString()} ${cur}** — I'll plan a great trip!
-- 📅 **Shorten the trip** — with ${extractedBudget.toLocaleString()} ${cur} you could comfortably do **${feasibleDays} days** in ${inlineDest.dest}
+- 📅 **Shorten the trip** — with ${knownBudget.toLocaleString()} ${cur} you could comfortably do **${feasibleDays} days** in ${inlineDest.dest}
 - ✈️ **Choose a cheaper destination** — Vietnam, Morocco, Bali, or Pakistan are all great on a tighter budget
 
 What would you like to do?`
@@ -211,60 +258,70 @@ What would you like to do?`
       setDest(inlineDest)
 
       if (ratio < 0.8) {
-        // Budget is tight but workable — warn + still offer to generate
-        return `Budget noted! **${extractedBudget.toLocaleString()} ${cur}** for ${extractedDays} days in **${inlineDest.dest}** is a little under the recommended **${minDisplay.toLocaleString()} ${cur}**, but I can still put together a solid budget-friendly plan for you! 🤏
+        return `Budget noted! **${knownBudget.toLocaleString()} ${cur}** for ${knownDays} days in **${inlineDest.dest}** is a little under the recommended **${minDisplay.toLocaleString()} ${cur}**, but I can still put together a solid budget-friendly plan for you! 🤏
 
 - 📍 **Destination**: ${inlineDest.dest}
-- 📅 **Duration**: ${extractedDays} days
-- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur} _(budget-friendly mode)_
+- 📅 **Duration**: ${knownDays} days
+- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} _(budget-friendly mode)_
 
 I'll prioritise affordable guesthouses, street food, and free or low-cost activities to make every rupee count. Click **"Generate My Trip Plan"** to proceed!
 
-${makeGenerateJSON(inlineDest, extractedDays, extractedBudget)}`
+${makeGenerateJSON(inlineDest, knownDays, knownBudget)}`
       }
 
-      // Budget is comfortable — proceed normally
       return `Got it — I have everything I need! 🎯
 
 - 📍 **Destination**: ${inlineDest.dest}
-- 📅 **Duration**: ${extractedDays} days
-- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur}
+- 📅 **Duration**: ${knownDays} days
+- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur}
 
 Click **"Generate My Trip Plan"** below for your complete personalised itinerary!
 
-${makeGenerateJSON(inlineDest, extractedDays, extractedBudget)}`
+${makeGenerateJSON(inlineDest, knownDays, knownBudget)}`
     }
 
-    // Also shortcut: destination was detected in a prior turn, user now gave days + budget
-    if (extractedDays && extractedBudget && detectedDestinationRef.current && !inlineDest) {
-      const d = detectedDestinationRef.current as DestInfo
-      const budgetPKR   = Math.round(extractedBudget * (toPKR[cur] ?? 1))
-      const minPerDay   = (d as DestInfo).minPerDayPKR ?? 20000
-      const minTotalPKR = minPerDay * extractedDays
-      const minDisplay  = Math.round(minTotalPKR / (toPKR[cur] ?? 1))
-      const ratio       = budgetPKR / minTotalPKR
+    // ── Partial-info: handle every 1-of-3 or 2-of-3 combination ─────────────
+    // inlineDest already falls back to detectedDestinationRef via the ?? above.
+    const knownDest = inlineDest   // null when truly unknown
+    if (knownDest) setDest(knownDest)
 
-      if (ratio < 0.5) {
-        const feasibleDays = Math.max(2, Math.floor(budgetPKR / minPerDay))
-        return `**${extractedBudget.toLocaleString()} ${cur}** for **${extractedDays} days** in **${d.dest}** is a bit low for a comfortable trip. 😬 The recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
+    // dest + budget, missing days
+    if (knownDest && knownBudget && !knownDays) {
+      return `Budget locked in — **${knownBudget.toLocaleString()} ${cur}**! 💰
 
-Options:
-- 💰 Increase to **${minDisplay.toLocaleString()} ${cur}**
-- 📅 Shorten to **${feasibleDays} days** within your budget
-- ✈️ Or pick a more budget-friendly destination
+- 📍 **Destination**: ${knownDest.dest} ✅
+- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} ✅
+- 📅 **Duration**: How many days are you planning?`
+    }
 
-What works best for you?`
-      }
+    // dest + days, missing budget
+    if (knownDest && knownDays && !knownBudget) {
+      return `${knownDays} days in **${knownDest.dest}** — great choice! ✈️
 
-      return `Perfect — I have all I need! 🎯
+- 📍 **Destination**: ${knownDest.dest} ✅
+- 📅 **Duration**: ${knownDays} days ✅
+- 💰 **Budget**: What's your total budget in ${cur}?`
+    }
 
-- 📍 **Destination**: ${d.dest}
-- 📅 **Duration**: ${extractedDays} days
-- 💰 **Budget**: ${extractedBudget.toLocaleString()} ${cur}${ratio < 0.8 ? ` _(a bit tight, I'll keep it budget-friendly)_` : ''}
+    // days + budget, missing destination
+    if (!knownDest && knownDays && knownBudget) {
+      return `**${knownDays} days** with a **${knownBudget.toLocaleString()} ${cur}** budget — let's plan! 🌍
 
-Click **"Generate My Trip Plan"** below!
+Just tell me your destination and I'll generate your complete itinerary instantly!`
+    }
 
-${makeGenerateJSON(d, extractedDays, extractedBudget)}`
+    // only budget given
+    if (knownBudget && !knownDays && !knownDest) {
+      return `Budget of **${knownBudget.toLocaleString()} ${cur}** noted! 💰
+
+Where would you like to go, and for how many days?`
+    }
+
+    // only days given
+    if (knownDays && !knownBudget && !knownDest) {
+      return `**${knownDays} days** — perfect trip length! ✈️
+
+Where would you like to go, and what's your total budget in ${cur}?`
     }
 
     // Helper: pick destination from current message keywords, also updating detectedDestinationRef
@@ -322,154 +379,113 @@ ${makeGenerateJSON(d, extractedDays, extractedBudget)}`
       return d
     }
 
-    if (turnCount === 0 || msg.includes('hello') || msg.includes('hi')) {
+    // Generic greeting ONLY when nothing useful was detected at all
+    if ((turnCount === 0 || msg.includes('hello') || msg.includes('hi')) && !knownDest && !knownDays && !knownBudget) {
       return `Great to meet you! 🌍 I'm excited to help plan your trip.
 
-Let me understand your dream adventure better. Could you tell me:
-1. **Where** would you like to go? (specific country/city, or a region like "Southeast Asia")
-2. **How long** are you planning to travel?`
+Tell me your dream destination (or a region), how many days, and your budget — I'll handle the rest!`
+    }
+
+    // Helper: build a "what's still missing" reply for destination-only messages
+    const missingAfterDest = (_emoji: string, destName: string, note: string): string => {
+      const daysLine = knownDays ? `- 📅 **Duration**: ${knownDays} days ✅` : `- 📅 **Duration**: How many days are you planning?`
+      const budgetLine = knownBudget ? `- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} ✅` : `- 💰 **Budget**: What's your total budget in ${cur}?`
+      const allSet = knownDays && knownBudget
+      return `${note}
+
+Here's what I have so far:
+- 📍 **Destination**: ${destName} ✅
+${daysLine}
+${budgetLine}${allSet ? '\n\nI have everything I need — click **"Generate My Trip Plan"** below! 🎯' : '\n\nJust reply with the missing details and I\'ll generate your plan instantly!'}`
+    }
+
+    // Helper: if dest is now known and we already have days + budget, auto-generate
+    const autoGenerateIfComplete = (d: DestInfo): string | null => {
+      if (!knownDays || !knownBudget) return null
+      setDest(d)
+      const budgetPKR   = Math.round(knownBudget * (toPKR[cur] ?? 1))
+      const minTotalPKR = (d.minPerDayPKR ?? 20000) * knownDays
+      const ratio       = budgetPKR / minTotalPKR
+      if (ratio < 0.5) return null  // Let the budget-warning path handle it on next check
+      return `Got it — I have everything I need! 🎯
+
+- 📍 **Destination**: ${d.dest}
+- 📅 **Duration**: ${knownDays} days
+- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur}
+
+Click **"Generate My Trip Plan"** below for your complete personalised itinerary!
+
+${makeGenerateJSON(d, knownDays, knownBudget)}`
     }
 
     if (msg.includes('pakistan') || msg.includes('hunza') || msg.includes('northern') || msg.includes('skardu') || msg.includes('lahore') || msg.includes('islamabad') || msg.includes('swat') || msg.includes('murree')) {
-      setDest({ dest: 'Hunza Valley', style: 'Adventure', interests: ['trekking', 'mountains', 'nature'] })
-      return `Pakistan is absolutely stunning! 🏔️ The northern areas — Hunza, Skardu, Fairy Meadows — are breathtaking.
-
-A few questions to tailor your Pakistan adventure:
-- **Budget**: What's your total budget in ${cur}?
-- **Interests**: Hiking & trekking, cultural sites, photography, or a mix?
-- **Group**: Traveling solo, with friends, or family?`
+      const d: DestInfo = { dest: 'Hunza Valley', style: 'Adventure', interests: ['trekking', 'mountains', 'nature'] }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏔️', 'Hunza Valley, Pakistan', 'Pakistan is absolutely stunning! 🏔️ The northern areas — Hunza, Skardu, Fairy Meadows — are breathtaking.'))
     }
 
     if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui') || msg.includes('krabi')) {
-      setDest({ dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'] })
-      return `Thailand is incredible! 🇹🇭🏯 From Bangkok's glittering temples to Phuket's beaches and Chiang Mai's night bazaars.
-
-Tell me more:
-- **Duration**: How many days are you planning?
-- **Which part**: Bangkok city, Phuket beaches, Chiang Mai culture, or island-hopping?
-- **Interests**: Temples & culture, street food, beaches & diving, nightlife, or a mix?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'], minPerDayPKR: 20000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🇹🇭', 'Bangkok, Thailand', "Thailand is incredible! 🇹🇭🏯 Glittering temples, Phuket beaches, and Chiang Mai's night bazaars."))
     }
 
     if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima')) {
-      setDest({ dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'] })
-      return `Japan is a magical destination! 🗼🌸 From Tokyo's futuristic skyline to Kyoto's ancient temples.
-
-Tell me more:
-- **Duration**: How many days are you planning?
-- **Interests**: Culture & temples, anime/gaming, street food tours, nature, or all of it?
-- **Season**: Any preferred time? Cherry blossom season in April is absolutely spectacular!
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'], minPerDayPKR: 45000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🗼', 'Tokyo, Japan', "Japan is a magical destination! 🗼🌸 Tokyo's futuristic skyline, Kyoto's ancient temples, and incredible food."))
     }
 
     if (msg.includes('singapore') || msg.includes('marina bay') || msg.includes('sentosa')) {
-      setDest({ dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'] })
-      return `Singapore is a world-class city-state! 🇸🇬✨ Marina Bay Sands, Gardens by the Bay, and incredible food.
-
-Tell me:
-- **Duration**: How many days?
-- **Interests**: City sightseeing, hawker food culture, Universal Studios, shopping, or nature?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'], minPerDayPKR: 35000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🇸🇬', 'Singapore', 'Singapore is a world-class city-state! 🇸🇬✨ Marina Bay Sands, Gardens by the Bay, and incredible food.'))
     }
 
     if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain')) {
-      setDest({ dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'] })
-      return `London is a world-class city! 🏙️🎭 From Buckingham Palace to the British Museum, the West End shows, and an incredible food scene.
-
-Tell me more:
-- **Duration**: How many days in London?
-- **Interests**: History & museums, theatre, royal sites, shopping, or food?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'], minPerDayPKR: 50000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'London, UK', "London is a world-class city! 🏙️🎭 Buckingham Palace, the British Museum, West End shows, and an incredible food scene."))
     }
 
     if (msg.includes('paris') || msg.includes('france')) {
-      setDest({ dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'] })
-      return `Paris, the City of Light! 🗼✨ The Eiffel Tower, Louvre, and world-famous cuisine await.
-
-A few questions:
-- **Duration**: How many days in Paris?
-- **Interests**: Art & museums, fine dining, fashion, day trips, or architecture?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'], minPerDayPKR: 45000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🗼', 'Paris, France', 'Paris, the City of Light! 🗼✨ The Eiffel Tower, Louvre, and world-famous cuisine await.'))
     }
 
     if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates')) {
-      setDest({ dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'] })
-      return `Dubai — where luxury meets adventure! 🏙️✨ Burj Khalifa, desert safaris, and world-class dining.
-
-Let me know:
-- **Duration**: How many days are you planning?
-- **Interests**: Shopping, desert safari, beaches, architecture, or nightlife?
-- **Budget**: What's your budget in ${cur}? (Dubai suits every budget!)`
+      const d: DestInfo = { dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'], minPerDayPKR: 50000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'Dubai, UAE', 'Dubai — where luxury meets adventure! 🏙️✨ Burj Khalifa, desert safaris, and world-class dining.'))
     }
 
     if (msg.includes('bali') || msg.includes('indonesia')) {
-      setDest({ dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'] })
-      return `Bali is simply magical! 🌴🌺 Stunning temples, rice terraces, beaches, and vibrant culture.
-
-Tell me:
-- **Duration**: How many days in Bali?
-- **Interests**: Beaches & surfing, temples & culture, yoga & wellness, food, or nightlife?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'], minPerDayPKR: 18000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🌴', 'Bali, Indonesia', 'Bali is simply magical! 🌴🌺 Stunning temples, rice terraces, beaches, and vibrant culture.'))
     }
 
     if (msg.includes('istanbul') || (msg.includes('turkey') && !msg.includes('turkey sandwich'))) {
-      setDest({ dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'] })
-      return `Istanbul — where East meets West! 🕌🌉 Ancient bazaars, the Hagia Sophia, Bosphorus cruises, and incredible food.
-
-Let me know:
-- **Duration**: How many days in Istanbul?
-- **Interests**: History & mosques, bazaars, food tours, Bosphorus, or architecture?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'], minPerDayPKR: 22000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🕌', 'Istanbul, Turkey', 'Istanbul — where East meets West! 🕌🌉 Ancient bazaars, the Hagia Sophia, and incredible food.'))
     }
 
     if (msg.includes('kuala lumpur') || msg.includes('malaysia') || msg.includes(' kl ') || msg.includes('kl,')) {
-      setDest({ dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'] })
-      return `Kuala Lumpur is vibrant and affordable! 🏙️🌃 Petronas Towers, amazing street food, and colonial charm.
-
-Tell me:
-- **Duration**: How many days in KL?
-- **Interests**: City sightseeing, street food, shopping, nature retreats, or day trips?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'], minPerDayPKR: 18000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'Kuala Lumpur, Malaysia', 'Kuala Lumpur is vibrant and affordable! 🏙️🌃 Petronas Towers, amazing street food, and colonial charm.'))
     }
 
     if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca')) {
-      setDest({ dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'] })
-      return `Morocco is enchanting! 🕌🌺 Marrakech's medinas, the Sahara Desert, and incredible cuisine await.
-
-Tell me:
-- **Duration**: How many days?
-- **Interests**: Ancient medinas & souks, Sahara desert tour, food & cooking, architecture, or beaches?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'], minPerDayPKR: 20000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🕌', 'Marrakech, Morocco', "Morocco is enchanting! 🕌🌺 Marrakech's medinas, the Sahara Desert, and incredible cuisine."))
     }
 
     if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids') || msg.includes('luxor')) {
-      setDest({ dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'] })
-      return `Egypt — one of history's greatest civilizations! 🏺🌅 The Pyramids, the Nile, and ancient temples.
-
-Tell me:
-- **Duration**: How many days?
-- **Interests**: Ancient monuments & pyramids, Nile cruise, diving in the Red Sea, or Cairo city life?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'], minPerDayPKR: 22000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏺', 'Cairo, Egypt', "Egypt — one of history's greatest civilizations! 🏺🌅 The Pyramids, the Nile, and ancient temples."))
     }
 
     if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos')) {
-      setDest({ dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'] })
-      return `Greece is breathtaking! 🏛️⛵ Ancient history, stunning island scenery, and amazing Mediterranean food.
-
-Tell me:
-- **Duration**: How many days?
-- **Interests**: Ancient history & Acropolis, island-hopping, beaches & sailing, food & wine, or city life?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'], minPerDayPKR: 38000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏛️', 'Athens, Greece', 'Greece is breathtaking! 🏛️⛵ Ancient history, stunning island scenery, and amazing Mediterranean food.'))
     }
 
     if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon') || msg.includes('hoi an')) {
-      setDest({ dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'] })
-      return `Vietnam is a traveler's dream! 🌿🍜 Ancient culture, incredible street food, and stunning landscapes.
-
-Tell me:
-- **Duration**: How many days?
-- **Which region**: Hanoi (north), Hoi An & Da Nang (central), Ho Chi Minh City (south), or Ha Long Bay?
-- **Budget**: What's your budget in ${cur}?`
+      const d: DestInfo = { dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'], minPerDayPKR: 15000 }
+      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🌿', 'Hanoi, Vietnam', "Vietnam is a traveler's dream! 🌿🍜 Ancient culture, incredible street food, and stunning landscapes."))
     }
 
     if (msg.includes('budget') || msg.match(/\$[\d,]+/) || msg.match(/\d+\s*(usd|pkr|gbp|eur|aed|sar|inr|cad|aud|try)/i)) {
@@ -557,12 +573,16 @@ Click **"Generate My Trip Plan"** below to see your complete itinerary!
 \`\`\``
     }
 
-    return `That sounds exciting! 🌍
+    // Smart fallback: only ask for what's genuinely missing
+    const missing: string[] = []
+    if (!knownDest) missing.push('📍 **Destination** — where would you like to go?')
+    if (!knownDays) missing.push(`📅 **Duration** — how many days?`)
+    if (!knownBudget) missing.push(`💰 **Budget** — total budget in ${cur}?`)
 
-To create your perfect itinerary, I need a few more details:
-- What's your **budget** for this trip? (in ${cur})
-- How many **days** are you planning?
-- What are your main **interests** while traveling?`
+    if (missing.length === 3) {
+      return `That sounds exciting! 🌍 To create your perfect itinerary, just tell me:\n${missing.map(m => `- ${m}`).join('\n')}`
+    }
+    return `Almost there! 🎯 I just need:\n${missing.map(m => `- ${m}`).join('\n')}`
   }, [selectedCurrency])
 
   const callAI = useCallback(async (userMessage: string, history: typeof conversationHistory) => {
@@ -684,17 +704,23 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
     const loadingMessage: Message = {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: '🗺️ Generating your personalized trip plan... This might take a moment!',
+      content: '🗺️ Crafting your personalised itinerary with real destinations, hotels, and restaurants… This takes about 15–20 seconds!',
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, loadingMessage])
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      const plan = generateMockPlan(preferences, extractedPreferences?.suggestedDestination)
+      // Try the real Claude-powered backend first; fall back to mock if unavailable
+      let plan
+      try {
+        plan = await generateTripPlan(preferences, extractedPreferences?.suggestedDestination)
+      } catch {
+        plan = generateMockPlan(preferences, extractedPreferences?.suggestedDestination)
+      }
+
       setCurrentPreferences(preferences)
       setCurrentPlan(plan)
-      saveTrip(plan)   // Auto-save so it persists in the dashboard immediately
+      saveTrip(plan)
       addSearchHistory({
         query: extractedPreferences?.suggestedDestination ?? 'Trip',
         destination: extractedPreferences?.suggestedDestination,
@@ -709,7 +735,7 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
       const errMsg: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: 'Something went wrong generating your plan. Please try again!',
+        content: 'Something went wrong generating your plan. Please try again! 🔄',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, errMsg])
@@ -726,6 +752,8 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
     setExtractedPreferences(null)
     setConversationHistory([])
     detectedDestinationRef.current = null
+    detectedDaysRef.current = null
+    detectedBudgetRef.current = null
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -911,7 +939,11 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
               </div>
 
               {/* Chat Window */}
-              <div className="flex-1 glass rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col" style={{ minHeight: '45vh', maxHeight: '60vh' }}>
+              <div className={`glass overflow-hidden flex flex-col transition-all duration-300 ${
+                isFullscreen
+                  ? 'fixed inset-0 z-50 rounded-none'
+                  : 'flex-1 rounded-2xl sm:rounded-3xl'
+              }`} style={isFullscreen ? {} : { minHeight: '45vh', maxHeight: '60vh' }}>
                 {/* Chat Messages */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-5">
                   <AnimatePresence initial={false}>
@@ -1007,6 +1039,14 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
                       title="Reset conversation"
                     >
                       <RotateCcw size={18} />
+                    </button>
+
+                    <button
+                      onClick={() => setIsFullscreen(v => !v)}
+                      className="p-2.5 rounded-xl text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors flex-shrink-0"
+                      title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                    >
+                      {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                     </button>
 
                     <div className="flex-1 relative">

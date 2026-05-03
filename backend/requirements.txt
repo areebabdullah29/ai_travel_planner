@@ -23,3 +23,6 @@ numpy==1.26.2
 
 # Utilities
 requests==2.31.0
+
+# Anthropic Claude AI
+anthropic>=0.40.0

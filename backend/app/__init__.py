@@ -31,11 +31,15 @@ def create_app(config_name=None):
     from .routes.destinations import destinations_bp
     from .routes.trips import trips_bp
     from .routes.search import search_bp
+    from .routes.weather import weather_bp
+    from .routes.chat import chat_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(destinations_bp, url_prefix='/api/destinations')
     app.register_blueprint(trips_bp, url_prefix='/api/trips')
     app.register_blueprint(search_bp, url_prefix='/api/search')
+    app.register_blueprint(weather_bp, url_prefix='/api')
+    app.register_blueprint(chat_bp, url_prefix='/api')
 
     # Health check endpoint
     @app.route('/api/health')

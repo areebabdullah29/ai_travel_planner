@@ -38,6 +38,31 @@ class DestinationModel:
         return DestinationModel.serialize(destination)
 
     @staticmethod
+    def _build_query(filters: dict = None) -> dict:
+        if not filters:
+            return {}
+
+        query = {}
+        if filters.get('type'):
+            query['type'] = filters['type']
+        if filters.get('region'):
+            query['region'] = filters['region']
+
+        min_budget = filters.get('minBudget')
+        max_budget = filters.get('maxBudget')
+        if min_budget is not None or max_budget is not None:
+            query['cost'] = {}
+            if max_budget is not None:
+                query['cost']['$lte'] = max_budget
+            if min_budget is not None:
+                query['cost']['$gte'] = min_budget
+
+        if filters.get('activities'):
+            query['activities'] = {'$in': filters['activities']}
+
+        return query
+
+    @staticmethod
     def find_all(
         filters: dict = None,
         sort_by: str = 'userRating',
@@ -46,23 +71,7 @@ class DestinationModel:
         skip: int = 0
     ) -> List[dict]:
         """Find all destinations with optional filtering"""
-        query = {}
-
-        if filters:
-            if filters.get('type'):
-                query['type'] = filters['type']
-            if filters.get('region'):
-                query['region'] = filters['region']
-            if filters.get('maxBudget'):
-                query['cost'] = {'$lte': filters['maxBudget']}
-            if filters.get('minBudget'):
-                if 'cost' in query:
-                    query['cost']['$gte'] = filters['minBudget']
-                else:
-                    query['cost'] = {'$gte': filters['minBudget']}
-            if filters.get('activities'):
-                query['activities'] = {'$in': filters['activities']}
-
+        query = DestinationModel._build_query(filters)
         destinations = DestinationModel.get_collection().find(query) \
             .sort(sort_by, sort_order) \
             .skip(skip) \

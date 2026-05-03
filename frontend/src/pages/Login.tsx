@@ -287,34 +287,11 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-7">
-            <div className="flex-1 h-px bg-white/8" />
-            <span className="text-white/25 text-xs">or continue with</span>
-            <div className="flex-1 h-px bg-white/8" />
-          </div>
-
-          {/* Social buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Google', icon: '🅖' },
-              { label: 'GitHub', icon: '🐙' },
-            ].map(({ label, icon }) => (
-              <button
-                key={label}
-                type="button"
-                className="flex items-center justify-center gap-2.5 py-3 rounded-xl glass text-white/60 text-sm font-medium hover:text-white hover:bg-white/8 transition-all"
-              >
-                <span>{icon}</span> {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sign up link — mobile */}
-          <p className="text-center text-white/30 text-sm mt-8">
-            New to TravelBuddy?{' '}
-            <Link to="/register" className="text-[#e91e8c] font-semibold hover:text-[#f06ab3] transition-colors">
-              Create an account
+          {/* Sign up link */}
+          <p className="text-center text-white/40 text-sm mt-7">
+            New to TravelBuddy?&nbsp;&nbsp;
+            <Link to="/register" className="text-[#e91e8c] font-bold hover:text-[#f06ab3] transition-colors tracking-widest">
+              CREATE AN ACCOUNT
             </Link>
           </p>
         </motion.div>

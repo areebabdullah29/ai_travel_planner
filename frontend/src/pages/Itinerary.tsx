@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -6,11 +6,16 @@ import {
   Download, Heart, Share2, ArrowLeft, ChevronDown,
   ChevronUp, Sparkles, Calendar, Users, Globe,
   Plane, Hotel, Car, ShoppingBag, Coffee, AlertCircle,
-  CheckCircle, X, LogIn
+  CheckCircle, X, LogIn, CloudSun, Wind, Droplets, Eye, Thermometer,
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import { useAuth } from '@/context/AuthContext'
 import type { DayPlan } from '@/types'
+import {
+  fetchWeather, fetchForecast, fetchHotels,
+  weatherIconUrl, weatherEmoji, getWeatherAdvisory, formatForecastDay,
+  type WeatherData, type ForecastItem, type RealHotel,
+} from '@/services/weatherService'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -45,7 +50,27 @@ export default function Itinerary() {
   const [expandedDay, setExpandedDay] = useState<number | null>(1)
   const [saved, setSaved] = useState(false)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info'>('itinerary')
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather'>('itinerary')
+  const [liveWeather, setLiveWeather] = useState<WeatherData | null>(null)
+  const [forecast, setForecast] = useState<ForecastItem[]>([])
+  const [realHotels, setRealHotels] = useState<RealHotel[]>([])
+  const [weatherLoading, setWeatherLoading] = useState(false)
+
+  useEffect(() => {
+    if (!currentPlan) return
+    const city = currentPlan.destination
+    setWeatherLoading(true)
+    Promise.all([
+      fetchWeather(city),
+      fetchForecast(city),
+      fetchHotels(city),
+    ]).then(([w, f, h]) => {
+      setLiveWeather(w)
+      setForecast(f)
+      setRealHotels(h)
+      setWeatherLoading(false)
+    })
+  }, [currentPlan?.destination])
 
   if (!currentPlan) {
     return (
@@ -293,17 +318,17 @@ export default function Itinerary() {
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 glass rounded-2xl mb-8">
-          {(['itinerary', 'restaurants', 'costs', 'info'] as const).map(tab => (
+          {(['itinerary', 'restaurants', 'costs', 'info', 'weather'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold capitalize transition-all ${
+              className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold capitalize transition-all ${
                 activeTab === tab
                   ? 'bg-[#e91e8c] text-white shadow-lg'
                   : 'text-white/50 hover:text-white'
               }`}
             >
-              {tab === 'info' ? 'Practical Info' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'info' ? 'Info' : tab === 'weather' ? '🌤 Weather' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -574,6 +599,144 @@ export default function Itinerary() {
                   <DollarSign size={22} className="text-[#ffd166]" />
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* ── WEATHER TAB ── */}
+          {activeTab === 'weather' && (
+            <motion.div
+              key="weather"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-5"
+            >
+              {weatherLoading ? (
+                <div className="glass rounded-2xl p-10 text-center">
+                  <div className="text-4xl mb-3 animate-spin inline-block">🌀</div>
+                  <p className="text-white/50">Fetching live weather data…</p>
+                </div>
+              ) : liveWeather ? (
+                <>
+                  {/* Current conditions card */}
+                  <div className="glass rounded-2xl p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Live Conditions</div>
+                        <h3 className="font-display text-2xl font-bold text-white">{liveWeather.city}</h3>
+                        <p className="text-white/50 text-sm">{liveWeather.description}</p>
+                      </div>
+                      <img
+                        src={weatherIconUrl(liveWeather.icon)}
+                        alt={liveWeather.description}
+                        className="w-20 h-20 -mt-2"
+                      />
+                    </div>
+                    <div className="flex items-end gap-3 mb-5">
+                      <span className="font-display text-7xl font-extrabold text-white">{liveWeather.temp}°</span>
+                      <div className="mb-3 text-white/40">
+                        <div className="text-sm">Feels like {liveWeather.feels_like}°C</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { icon: Droplets, label: 'Humidity', value: `${liveWeather.humidity}%`, color: '#4cc9f0' },
+                        { icon: Wind, label: 'Wind', value: `${liveWeather.wind_speed} m/s`, color: '#06d6a0' },
+                        { icon: Eye, label: 'Visibility', value: `${liveWeather.visibility} km`, color: '#ffd166' },
+                      ].map(({ icon: Icon, label, value, color }) => (
+                        <div key={label} className="rounded-xl p-3 text-center" style={{ background: `${color}12` }}>
+                          <Icon size={16} style={{ color }} className="mx-auto mb-1" />
+                          <div className="text-white/40 text-xs mb-0.5">{label}</div>
+                          <div className="text-white font-semibold text-sm">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {getWeatherAdvisory(liveWeather.description, liveWeather.temp) && (
+                      <div className="mt-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-[#ffd166]/10 border border-[#ffd166]/20">
+                        <AlertCircle size={16} className="text-[#ffd166] flex-shrink-0 mt-0.5" />
+                        <p className="text-[#ffd166] text-sm">{getWeatherAdvisory(liveWeather.description, liveWeather.temp)}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Forecast */}
+                  {forecast.length > 0 && (
+                    <div className="glass rounded-2xl p-6">
+                      <h3 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
+                        <CloudSun size={13} className="inline mr-2 text-[#4cc9f0]" />
+                        Hourly Forecast
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {forecast.slice(0, 8).map((f, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="rounded-xl p-3 text-center bg-white/3 hover:bg-white/5 transition-colors"
+                          >
+                            <div className="text-white/40 text-xs mb-1">{formatForecastDay(f.time)}</div>
+                            <img
+                              src={weatherIconUrl(f.icon)}
+                              alt={f.description}
+                              className="w-10 h-10 mx-auto"
+                            />
+                            <div className="font-display font-bold text-white text-lg">{f.temp}°</div>
+                            <div className="text-white/40 text-xs mt-0.5 truncate">{f.description}</div>
+                            <div className="flex items-center justify-center gap-1 mt-1 text-white/30 text-xs">
+                              <Droplets size={9} />{f.humidity}%
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Real hotels from OpenTripMap */}
+                  {realHotels.length > 0 && (
+                    <div className="glass rounded-2xl p-6">
+                      <h3 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
+                        <Hotel size={13} className="inline mr-2 text-[#ffd166]" />
+                        Real Hotels Near {destination} — via OpenTripMap
+                      </h3>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {realHotels.slice(0, 9).map((h, i) => (
+                          <motion.div
+                            key={h.xid || i}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.05 }}
+                            className="flex items-start gap-3 p-3 rounded-xl bg-white/3 hover:bg-white/5 transition-colors"
+                          >
+                            <div className="w-9 h-9 rounded-xl bg-[#ffd166]/10 flex items-center justify-center flex-shrink-0">
+                              <Hotel size={16} className="text-[#ffd166]" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-white font-medium text-sm truncate">{h.name}</div>
+                              <div className="text-white/30 text-xs mt-0.5">{h.dist} m from center</div>
+                              {h.rate > 0 && (
+                                <div className="flex items-center gap-0.5 mt-1">
+                                  {Array.from({ length: Math.min(h.rate, 5) }).map((_, j) => (
+                                    <Star key={j} size={9} className="text-[#ffd166]" fill="#ffd166" />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="glass rounded-2xl p-10 text-center">
+                  <div className="text-4xl mb-3">{weatherEmoji('cloudy')}</div>
+                  <h3 className="text-white font-semibold mb-2">Weather data unavailable</h3>
+                  <p className="text-white/40 text-sm">
+                    Configure <code className="text-[#e91e8c]">OPENWEATHER_API_KEY</code> in your backend .env to enable live weather.
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
 

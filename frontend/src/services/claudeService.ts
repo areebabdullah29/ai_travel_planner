@@ -146,34 +146,49 @@ export async function sendChatMessage(
   return data.response as string
 }
 
-// ── Generate a full trip plan (backend) ───────────────────────────────────
-export async function generateTripPlan(preferences: TripPreferences): Promise<TripPlan> {
+// ── Generate a full trip plan via backend Claude API ─────────────────────
+export async function generateTripPlan(
+  preferences: TripPreferences,
+  suggestedDestination?: string,
+): Promise<TripPlan> {
   const response = await fetch(`${API_URL}/api/generate-plan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(preferences),
+    body: JSON.stringify({ ...preferences, suggestedDestination }),
   })
-  if (!response.ok) throw new Error('Failed to generate trip plan')
-  return response.json() as Promise<TripPlan>
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(err.error ?? 'Failed to generate trip plan')
+  }
+  const data = await response.json() as TripPlan & { data?: TripPlan }
+  // Backend wraps in { data: ... } via json_response helper
+  return (data.data ?? data) as TripPlan
 }
 
 // ── System prompt ──────────────────────────────────────────────────────────
 export const TRAVEL_SYSTEM_PROMPT = `You are TravelBuddy, an enthusiastic and knowledgeable AI travel planning assistant. Your goal is to help users plan their perfect trip through a friendly conversation.
 
-You should:
-1. Greet the user warmly and ask about their dream destination or travel preferences
-2. Gather information naturally through conversation:
-   - Destination or region of interest
-   - Budget (total or daily budget — use the user's selected currency, default PKR)
-   - Trip duration (number of days)
-   - Travel interests (adventure, relaxation, culture, food, photography, etc.)
-   - Preferred weather/season
-   - Group type (solo, couple, family, friends)
-   - Departure city/country
+CRITICAL RULE — READ THE USER'S MESSAGE FIRST:
+- If the user's message already mentions a destination, duration, budget, or any other details, acknowledge those details immediately. NEVER ask for information that was already provided.
+- Examples:
+  - "10 days in Japan" → you already know destination=Japan, duration=10 days. Only ask for budget and interests.
+  - "Paris for 7 days under $2000" → you know destination=Paris, duration=7, budget=$2000. Only ask about interests/group type.
+  - "Safari, Kenya" → you know destination=Kenya safari. Ask about duration, budget, interests.
+  - "Adventure trip in northern Pakistan" → destination=Pakistan (north), style=adventure. Ask duration and budget only.
+- Summarize what you understood before asking follow-up questions. E.g. "Great! So you want 10 days in Japan — exciting choice! 🗼 To build your perfect plan, I just need: your budget and what kind of experiences you enjoy (culture, food, adventure, etc.)?"
 
-3. Once you have enough information (at least budget, duration, and interests), offer to generate a detailed trip plan
+You should:
+1. On first message: extract ALL details already provided, confirm them, then ask ONLY for what is still missing.
+2. Gather any remaining missing info naturally:
+   - Destination or region of interest (if not given)
+   - Budget (total — use the user's selected currency, default PKR)
+   - Trip duration in days (if not given)
+   - Travel interests (adventure, relaxation, culture, food, photography, etc.)
+   - Group type (solo, couple, family, friends)
+
+3. Once you have destination + duration + budget (even approximate), offer to generate the plan immediately
 4. Be enthusiastic, use travel-related emojis occasionally, and give helpful tips
-5. When the user is ready for a full plan, output a JSON object wrapped in \`\`\`json code blocks with this exact structure:
+5. When ready for the full plan, output a JSON object wrapped in \`\`\`json code blocks with this exact structure:
 
 {
   "readyToGenerate": true,

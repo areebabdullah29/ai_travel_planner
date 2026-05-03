@@ -2,18 +2,15 @@
  * Centralized API client for Travel Buddy backend.
  * - Injects JWT Authorization header on every request
  * - Auto-refreshes expired access tokens using the stored refresh token
- * - Gracefully handles offline/server-down scenarios (callers must catch errors)
  */
 
 import type { TripPlan } from '@/types'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-
-const TOKEN_KEY         = 'travel-buddy-token'
+const TOKEN_KEY = 'travel-buddy-token'
 const REFRESH_TOKEN_KEY = 'travel-buddy-refresh-token'
-const USER_KEY          = 'travel-buddy-user'
-
-// ── Token helpers ────────────────────────────────────────────────────────────
+const USER_KEY = 'travel-buddy-user'
+const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -34,53 +31,57 @@ export function clearStoredAuth() {
   localStorage.removeItem(USER_KEY)
 }
 
-// ── Core fetch wrapper ────────────────────────────────────────────────────────
+function buildHeaders(options: RequestInit = {}): Record<string, string> {
+  const customHeaders = (options.headers && typeof options.headers === 'object'
+    ? (options.headers as Record<string, string>)
+    : {})
+
+  return {
+    ...JSON_HEADERS,
+    ...customHeaders,
+    ...(getStoredToken() ? { Authorization: `Bearer ${getStoredToken()}` } : {}),
+  }
+}
 
 async function tryRefreshAccessToken(): Promise<boolean> {
   const refreshToken = getStoredRefreshToken()
   if (!refreshToken) return false
+
   try {
     const res = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${refreshToken}`,
-      },
+      headers: { ...JSON_HEADERS, Authorization: `Bearer ${refreshToken}` },
     })
-    if (res.ok) {
-      const data = await res.json() as { data: { token: string } }
-      localStorage.setItem(TOKEN_KEY, data.data.token)
-      return true
-    }
-  } catch { /* network error */ }
-  clearStoredAuth()
-  return false
+
+    if (!res.ok) return false
+    const data = await res.json() as { data: { token: string } }
+    storeTokens(data.data.token)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
-  const token = getStoredToken()
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string>),
-  }
-  if (token) headers['Authorization'] = `Bearer ${token}`
-
+  const headers = buildHeaders(options)
   const res = await fetch(`${API_URL}${path}`, { ...options, headers })
 
-  // If token expired, try once to refresh and retry
-  if (res.status === 401) {
-    const refreshed = await tryRefreshAccessToken()
-    if (refreshed) {
-      const newToken = getStoredToken()
-      if (newToken) headers['Authorization'] = `Bearer ${newToken}`
-      return fetch(`${API_URL}${path}`, { ...options, headers })
-    }
+  if (res.status === 401 && await tryRefreshAccessToken()) {
+    return fetch(`${API_URL}${path}`, { ...options, headers: buildHeaders(options) })
   }
 
   return res
 }
 
-// ── Response type ─────────────────────────────────────────────────────────────
+async function parseJson<T>(res: Response, fallback: string): Promise<T> {
+  const text = await res.text()
+  const data = text ? JSON.parse(text) : {}
+  if (!res.ok) {
+    const error = (data as any)?.error ?? fallback
+    throw new Error(error)
+  }
+  return data as T
+}
 
 export interface ApiUser {
   id: string
@@ -115,19 +116,17 @@ export interface BackendTrip {
   createdAt: string
 }
 
-// ── Auth API ──────────────────────────────────────────────────────────────────
+async function requestJson<T>(path: string, options: RequestInit = {}, fallback = 'Request failed'): Promise<T> {
+  const res = await apiFetch(path, options)
+  return parseJson<T>(res, fallback)
+}
 
 export const authApi = {
   async login(email: string, password: string): Promise<{ user: ApiUser; token: string; refreshToken: string }> {
-    const res = await apiFetch('/api/auth/login', {
+    const data = await requestJson<{ data: AuthResponseData }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    })
-    if (!res.ok) {
-      const err = await res.json() as { error?: string }
-      throw new Error(err.error ?? 'Login failed')
-    }
-    const data = await res.json() as { data: AuthResponseData }
+    }, 'Login failed')
     return data.data
   },
 
@@ -137,44 +136,31 @@ export const authApi = {
     password: string,
     preferences?: ApiUser['preferences']
   ): Promise<{ user: ApiUser; token: string; refreshToken: string }> {
-    const res = await apiFetch('/api/auth/register', {
+    const data = await requestJson<{ data: AuthResponseData }>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password, preferences }),
-    })
-    if (!res.ok) {
-      const err = await res.json() as { error?: string }
-      throw new Error(err.error ?? 'Registration failed')
-    }
-    const data = await res.json() as { data: AuthResponseData }
+    }, 'Registration failed')
     return data.data
   },
 
   async getProfile(): Promise<ApiUser> {
-    const res = await apiFetch('/api/auth/profile')
-    if (!res.ok) throw new Error('Unauthorized')
-    const data = await res.json() as { data: ApiUser }
+    const data = await requestJson<{ data: ApiUser }>('/api/auth/profile', {}, 'Unauthorized')
     return data.data
   },
 
   async updatePreferences(preferences: ApiUser['preferences']): Promise<ApiUser> {
-    const res = await apiFetch('/api/auth/preferences', {
+    const data = await requestJson<{ data: ApiUser }>('/api/auth/preferences', {
       method: 'PUT',
       body: JSON.stringify({ preferences }),
-    })
-    if (!res.ok) throw new Error('Failed to update preferences')
-    const data = await res.json() as { data: ApiUser }
+    }, 'Failed to update preferences')
     return data.data
   },
 }
 
-// ── Trips API ─────────────────────────────────────────────────────────────────
-
 export const tripsApi = {
   async getAll(status?: string): Promise<BackendTrip[]> {
     const query = status ? `?status=${status}` : ''
-    const res = await apiFetch(`/api/trips${query}`)
-    if (!res.ok) throw new Error('Failed to fetch trips')
-    const data = await res.json() as { data: BackendTrip[] }
+    const data = await requestJson<{ data: BackendTrip[] }>(`/api/trips${query}`, {}, 'Failed to fetch trips')
     return data.data
   },
 
@@ -185,22 +171,18 @@ export const tripsApi = {
     status?: string
     planData: TripPlan
   }): Promise<BackendTrip> {
-    const res = await apiFetch('/api/trips', {
+    const data = await requestJson<{ data: BackendTrip }>('/api/trips', {
       method: 'POST',
       body: JSON.stringify(payload),
-    })
-    if (!res.ok) throw new Error('Failed to save trip')
-    const data = await res.json() as { data: BackendTrip }
+    }, 'Failed to save trip')
     return data.data
   },
 
   async updateStatus(backendId: string, status: 'planned' | 'ongoing' | 'completed'): Promise<BackendTrip> {
-    const res = await apiFetch(`/api/trips/${backendId}/status`, {
+    const data = await requestJson<{ data: BackendTrip }>(`/api/trips/${backendId}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
-    })
-    if (!res.ok) throw new Error('Failed to update trip status')
-    const data = await res.json() as { data: BackendTrip }
+    }, 'Failed to update trip status')
     return data.data
   },
 
@@ -209,8 +191,6 @@ export const tripsApi = {
     if (!res.ok) throw new Error('Failed to delete trip')
   },
 }
-
-// ── Health check ──────────────────────────────────────────────────────────────
 
 export async function checkBackendHealth(): Promise<boolean> {
   try {
