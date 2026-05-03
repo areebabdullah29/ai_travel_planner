@@ -20,7 +20,7 @@ interface AuthContextValue {
   isAuthenticated: boolean
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  register: (name: string, email: string, password: string, interests?: string[]) => Promise<void>
   logout: () => void
   updatePreferences: (prefs: ApiUser['preferences']) => Promise<void>
 }
@@ -33,31 +33,10 @@ function apiUserToUser(u: ApiUser): User {
   return { id: u.id, name: u.name, email: u.email, preferences: u.preferences, createdAt: u.createdAt }
 }
 
-// ── Mock fallback helpers (used when backend is offline) ─────────────────────
-const mockAccountKey = (email: string) => `travel-buddy-account-${email}`
-
-function mockLogin(email: string, password: string): User {
-  const stored = localStorage.getItem(mockAccountKey(email))
-  if (!stored) throw new Error('No account found with this email')
-  const account = JSON.parse(stored) as { password: string; user: User }
-  if (account.password !== password) throw new Error('Invalid email or password')
-  return account.user
-}
-
-function mockRegister(name: string, email: string, password: string): User {
-  if (localStorage.getItem(mockAccountKey(email))) throw new Error('An account with this email already exists')
-  const newUser: User = { id: crypto.randomUUID(), name, email, createdAt: new Date().toISOString() }
-  localStorage.setItem(mockAccountKey(email), JSON.stringify({ password, user: newUser }))
-  return newUser
-}
-
-// ── Provider ──────────────────────────────────────────────────────────────────
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // On mount: validate stored token against backend, fall back to cached user if offline
   useEffect(() => {
     const init = async () => {
       const token = localStorage.getItem('travel-buddy-token')
@@ -69,17 +48,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Verify token is still valid
         const profile = await authApi.getProfile()
         const u = apiUserToUser(profile)
         setUser(u)
         localStorage.setItem(USER_KEY, JSON.stringify(u))
       } catch (err) {
         if (err instanceof Error && err.message === 'Unauthorized') {
-          // Token expired and refresh failed — clear auth
           clearStoredAuth()
         } else if (cached) {
-          // Network offline — trust cached user
           setUser(JSON.parse(cached) as User)
         }
       } finally {
@@ -100,30 +76,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storeTokens(token, refreshToken)
       persistUser(apiUserToUser(apiUser))
     } catch (err) {
-      if (err instanceof TypeError) {
-        // Backend offline — use mock fallback
-        const u = mockLogin(email, password)
-        localStorage.setItem('travel-buddy-token', `mock_${crypto.randomUUID()}`)
-        persistUser(u)
-        return
-      }
+      if (err instanceof TypeError) throw new Error('Cannot reach the server. Please check your connection.')
       throw err
     }
   }, [])
 
-  const register = useCallback(async (name: string, email: string, password: string) => {
+  const register = useCallback(async (name: string, email: string, password: string, interests?: string[]) => {
+    const preferences = interests?.length ? { travelStyles: interests } : undefined
     try {
-      const { user: apiUser, token, refreshToken } = await authApi.register(name, email, password)
+      const { user: apiUser, token, refreshToken } = await authApi.register(name, email, password, preferences)
       storeTokens(token, refreshToken)
       persistUser(apiUserToUser(apiUser))
     } catch (err) {
-      if (err instanceof TypeError) {
-        // Backend offline — use mock fallback
-        const u = mockRegister(name, email, password)
-        localStorage.setItem('travel-buddy-token', `mock_${crypto.randomUUID()}`)
-        persistUser(u)
-        return
-      }
+      if (err instanceof TypeError) throw new Error('Cannot reach the server. Please check your connection.')
       throw err
     }
   }, [])
@@ -139,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const u = apiUserToUser(updated)
       persistUser(u)
     } catch {
-      // Silently fail — preferences update is non-critical
+      // non-critical
     }
   }, [])
 

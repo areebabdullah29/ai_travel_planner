@@ -11,7 +11,11 @@ async def connect_db():
     global _client, _db
     settings = get_settings()
     _client = AsyncIOMotorClient(settings.MONGO_URI)
-    _db = _client.get_default_database()
+    try:
+        _db = _client.get_default_database()
+    except Exception:
+        # URI has no database name embedded — fall back to 'travel_buddy'
+        _db = _client["travel_buddy"]
     print(f"Connected to MongoDB: {settings.MONGO_URI}")
 
 

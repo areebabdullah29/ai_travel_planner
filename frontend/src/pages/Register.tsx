@@ -71,7 +71,7 @@ export default function Register() {
     setError('')
     setIsLoading(true)
     try {
-      await register(name.trim(), email.trim(), password)
+      await register(name.trim(), email.trim(), password, selectedInterests)
       navigate('/', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.')

@@ -50,12 +50,13 @@ async function tryRefreshAccessToken(): Promise<boolean> {
   try {
     const res = await fetch(`${API_URL}/api/auth/refresh`, {
       method: 'POST',
-      headers: { ...JSON_HEADERS, Authorization: `Bearer ${refreshToken}` },
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ refreshToken }),
     })
 
     if (!res.ok) return false
-    const data = await res.json() as { data: { token: string } }
-    storeTokens(data.data.token)
+    const data = await res.json() as { token: string }
+    storeTokens(data.token)
     return true
   } catch {
     return false
@@ -77,8 +78,17 @@ async function parseJson<T>(res: Response, fallback: string): Promise<T> {
   const text = await res.text()
   const data = text ? JSON.parse(text) : {}
   if (!res.ok) {
-    const error = (data as any)?.error ?? fallback
-    throw new Error(error)
+    const detail = (data as any)?.detail
+    let message: string
+    if (typeof detail === 'string') {
+      message = detail
+    } else if (Array.isArray(detail) && detail.length > 0) {
+      // FastAPI validation error — each item has a `msg` field
+      message = detail.map((d: any) => d?.msg ?? String(d)).join(', ')
+    } else {
+      message = (data as any)?.error ?? fallback
+    }
+    throw new Error(message)
   }
   return data as T
 }
@@ -97,7 +107,7 @@ export interface ApiUser {
   createdAt: string
 }
 
-interface AuthResponseData {
+export interface AuthResponseData {
   user: ApiUser
   token: string
   refreshToken: string
@@ -122,12 +132,11 @@ async function requestJson<T>(path: string, options: RequestInit = {}, fallback 
 }
 
 export const authApi = {
-  async login(email: string, password: string): Promise<{ user: ApiUser; token: string; refreshToken: string }> {
-    const data = await requestJson<{ data: AuthResponseData }>('/api/auth/login', {
+  async login(email: string, password: string): Promise<AuthResponseData> {
+    return requestJson<AuthResponseData>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }, 'Login failed')
-    return data.data
   },
 
   async register(
@@ -135,25 +144,22 @@ export const authApi = {
     email: string,
     password: string,
     preferences?: ApiUser['preferences']
-  ): Promise<{ user: ApiUser; token: string; refreshToken: string }> {
-    const data = await requestJson<{ data: AuthResponseData }>('/api/auth/register', {
+  ): Promise<AuthResponseData> {
+    return requestJson<AuthResponseData>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password, preferences }),
     }, 'Registration failed')
-    return data.data
   },
 
   async getProfile(): Promise<ApiUser> {
-    const data = await requestJson<{ data: ApiUser }>('/api/auth/profile', {}, 'Unauthorized')
-    return data.data
+    return requestJson<ApiUser>('/api/auth/profile', {}, 'Unauthorized')
   },
 
   async updatePreferences(preferences: ApiUser['preferences']): Promise<ApiUser> {
-    const data = await requestJson<{ data: ApiUser }>('/api/auth/preferences', {
+    return requestJson<ApiUser>('/api/auth/preferences', {
       method: 'PUT',
       body: JSON.stringify({ preferences }),
     }, 'Failed to update preferences')
-    return data.data
   },
 }
 

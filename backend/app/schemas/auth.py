@@ -22,23 +22,10 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     """User response schema"""
-    id: str = Field(alias="_id")
+    id: str
     preferences: Optional[Dict[str, Any]] = None
     role: str = "user"
     createdAt: Optional[str] = None
-
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
-            "example": {
-                "_id": "507f1f77bcf86cd799439011",
-                "name": "John Doe",
-                "email": "john@example.com",
-                "preferences": {},
-                "role": "user",
-                "createdAt": "2024-01-01T00:00:00"
-            }
-        }
 
 
 class RegisterRequest(UserCreate):

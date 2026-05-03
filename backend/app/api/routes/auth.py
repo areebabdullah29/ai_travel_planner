@@ -99,4 +99,4 @@ async def get_profile(
     current_user=Depends(get_current_user),
 ):
     """Get current user profile"""
-    return UserResponse(**current_user)
+    return UserResponse(**UserModel.serialize(current_user))

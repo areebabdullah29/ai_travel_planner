@@ -21,8 +21,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_HOURS: int = 24
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # CORS
-    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # CORS — stored as comma-separated string so .env doesn't need JSON syntax
+    CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Return CORS_ORIGINS as a list"""
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
     # External APIs
     ANTHROPIC_API_KEY: Optional[str] = None
@@ -32,6 +37,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 @lru_cache()
