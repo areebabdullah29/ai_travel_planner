@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: Optional[str] = None
     OPENWEATHER_API_KEY: Optional[str] = None
     OPENTRIPMAP_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None  # Gemini key for ADK travel agent
 
     class Config:
         env_file = ".env"

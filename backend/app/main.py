@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.database import connect_db, close_db
-from app.api.routes import auth, trips, destinations, search, weather, chat
+from app.api.routes import auth, trips, destinations, search, weather, chat, agent
 
 settings = get_settings()
 
@@ -44,6 +44,7 @@ app.include_router(destinations.router, prefix="/api/destinations", tags=["desti
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(weather.router, prefix="/api", tags=["weather"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
+app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
 
 
 # Health check endpoint
