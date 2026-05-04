@@ -1,12 +1,18 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.database import connect_db, close_db
-from app.api.routes import auth, trips, destinations, search, weather, chat, agent
 
+# Must set GOOGLE_API_KEY in os.environ BEFORE importing any google-adk/google-genai
+# modules, because the ADK client reads it at initialization time.
 settings = get_settings()
+if settings.GOOGLE_API_KEY:
+    os.environ.setdefault("GOOGLE_API_KEY", settings.GOOGLE_API_KEY)
+
+from app.api.routes import auth, trips, destinations, search, weather, chat, agent  # noqa: E402
 
 
 @asynccontextmanager

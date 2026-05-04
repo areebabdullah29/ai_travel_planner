@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
-import type { SavedTrip, TripPlan, TripPreferences } from '@/types'
+import type { SavedTrip, TripPlan, TripPreferences, ConversationEntry } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { tripsApi } from '@/services/apiService'
 
@@ -21,7 +21,7 @@ interface TripContextValue {
   currentPreferences: TripPreferences | null
   currentPlan: TripPlan | null
   isSyncing: boolean
-  saveTrip: (plan: TripPlan) => void
+  saveTrip: (plan: TripPlan, conversation?: ConversationEntry[]) => void
   deleteTrip: (id: string) => void
   updateTripStatus: (frontendId: string, status: SavedTrip['status']) => void
   addSearchHistory: (entry: Omit<SearchHistoryEntry, 'id' | 'searchedAt'>) => void
@@ -149,11 +149,12 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const setCurrentPlan = useCallback((plan: TripPlan | null) => setCurrentPlanState(plan), [])
 
   // ── saveTrip ──────────────────────────────────────────────────────────────
-  const saveTrip = useCallback((plan: TripPlan) => {
+  const saveTrip = useCallback((plan: TripPlan, conversation?: ConversationEntry[]) => {
     const savedLocally: SavedTrip = {
       ...plan,
       savedAt: new Date().toISOString(),
       status: 'planned',
+      ...(conversation?.length ? { conversation } : {}),
     }
 
     // Optimistic local update

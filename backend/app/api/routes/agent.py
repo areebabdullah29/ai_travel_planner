@@ -227,21 +227,6 @@ async def weather_forecast(city: str, days: int = 5):
     return {"success": True, "data": get_weather_forecast(city, days)}
 
 
-@router.post("/validate-budget")
-async def validate_budget_endpoint(
-    destination: str,
-    budget: float,
-    duration_days: int,
-    currency: str = "PKR",
-    travelers: int = 1,
-):
-    """Quick budget validation without starting a chat session."""
-    from app.agent.tools.cost_tools import validate_budget
-
-    result = validate_budget(destination, duration_days, budget, currency, travelers)
-    return {"success": True, "data": result}
-
-
 @router.post("/estimate-costs")
 async def estimate_costs_endpoint(
     destination: str,
@@ -250,8 +235,44 @@ async def estimate_costs_endpoint(
     accommodation_tier: str = "mid_range",
     currency: str = "PKR",
 ):
-    """Get itemized cost estimate for a trip."""
-    from app.agent.tools.cost_tools import estimate_trip_costs
+    """
+    Get a real-time itemised cost estimate for a trip by searching the web.
+    Works for any destination worldwide — not limited to a hardcoded list.
+    """
+    import asyncio, json, re
+    from google import genai
+    from google.genai import types as gt
 
-    result = estimate_trip_costs(destination, duration_days, travelers, accommodation_tier, currency)
-    return {"success": True, "data": result}
+    if not settings.GOOGLE_API_KEY:
+        raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured in .env")
+
+    client = genai.Client()
+
+    prompt = (
+        f"Search the web for current travel costs to {destination} for {duration_days} days, "
+        f"{travelers} traveler(s), {accommodation_tier} accommodation tier. "
+        f"Return ONLY a JSON object — no markdown fences, no explanation — in this exact shape:\n"
+        f'{{"destination":"{destination}","currency":"{currency}","grand_total":0,'
+        f'"daily_average_per_person":0,'
+        f'"breakdown":{{"flights_round_trip":0,"accommodation":0,"meals":0,"activities":0,"local_transport":0}}}}\n'
+        f"Replace the zeros with real numbers in {currency}."
+    )
+
+    try:
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config=gt.GenerateContentConfig(
+                tools=[gt.Tool(google_search=gt.GoogleSearch())],
+            ),
+        )
+        text = response.text or ""
+        match = re.search(r"\{[\s\S]*\}", text)
+        if match:
+            data = json.loads(match.group())
+            return {"success": True, "data": data}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Cost search failed: {exc}") from exc
+
+    raise HTTPException(status_code=500, detail="Could not parse cost estimate from search results")

@@ -5,10 +5,11 @@ Imported and used by app/api/routes/agent.py.
 
 import os
 from google.adk.agents import Agent
+from google.adk.tools import google_search
 from google.genai import types as genai_types
 
 from app.agent.tools.weather_tools import get_weather_forecast, check_weather_for_travel
-from app.agent.tools.cost_tools import estimate_trip_costs, validate_budget, get_budget_recommendation
+from app.agent.tools.cost_tools import calculate_trip_costs, get_budget_recommendation
 from app.agent.tools.destination_tools import (
     search_destinations,
     get_destination_details,
@@ -81,32 +82,28 @@ cost_agent = Agent(
     name="cost_agent",
     model="gemini-3.1-flash-lite-preview",
     description=(
-        "Validates budgets, estimates trip costs, and warns when budgets are insufficient. "
-        "Calculates costs for flights, accommodation, meals, and activities."
+        "Searches the web for real, current trip costs for any destination worldwide. "
+        "Calculates flights, accommodation, meals, activities, and local transport."
     ),
     instruction="""
 You are the Budget and Cost Analyst for the AI Travel Buddy system.
+You have access to google_search — use it to find REAL, CURRENT prices for any destination.
 
-Your responsibilities:
-1. Validate budget sufficiency using validate_budget
-2. Estimate detailed trip costs using estimate_trip_costs
-3. Suggest budget tiers using get_budget_recommendation
-4. Provide cost-saving tips for tight budgets
+## Workflow for cost estimation
+1. Search accommodation: "[destination] average hotel price per night 2024 [budget/mid-range/luxury]"
+2. Search flights: "cheapest flight to [destination] from Pakistan round trip 2024"
+3. Search daily costs: "[destination] average daily travel cost 2024"
+4. Call calculate_trip_costs with the real numbers you found
+5. Present a clear itemised breakdown
 
-Critical rules:
-- Default currency is PKR unless specified
-- Clearly warn when budget is too low with exact shortfall and minimum needed
-- When budget is under PKR 30,000 for 5+ days, suggest local Pakistani destinations
-- Always show breakdown: flights + accommodation + meals + activities
-- Recommend 15-20% buffer for unexpected expenses
-
-Budget guidance (PKR):
-- Under 20,000: Local city trips or day trips only
-- 20,000-50,000: Pakistani local destinations
-- 50,000-150,000: Pakistan + some regional options
-- 150,000+: Regional international destinations
+## Rules
+- ALWAYS use google_search for prices — never estimate from memory
+- State which currency you are using; default to PKR
+- Clearly warn if budget is insufficient: state exact shortfall and minimum needed
+- Recommend a 15–20% buffer for unexpected expenses
+- For Pakistani travelers on tight budgets, search for local Pakistan options too
 """,
-    tools=[estimate_trip_costs, validate_budget, get_budget_recommendation],
+    tools=[google_search, calculate_trip_costs, get_budget_recommendation],
     generate_content_config=genai_types.GenerateContentConfig(temperature=0.2),
 )
 

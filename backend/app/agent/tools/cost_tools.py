@@ -1,199 +1,122 @@
-"""Cost estimation and budget validation tools."""
+"""
+Cost calculation tools for the ADK cost_agent.
 
-from app.agent.data.destinations import (
-    DESTINATIONS,
-    ABSOLUTE_MIN_BUDGETS_PKR,
-    convert_from_pkr,
-    convert_to_pkr,
-    get_accommodation_tier,
-)
+The cost_agent uses google_search to find real, current prices for any destination.
+These helpers perform arithmetic once the agent has the raw numbers from search.
+"""
+
+# Exchange rates for generic budget recommendations (PKR base)
+_PKR_RATES: dict[str, float] = {
+    "PKR": 1, "USD": 278, "EUR": 300, "GBP": 355,
+    "AED": 76, "SAR": 74, "CAD": 205, "AUD": 182,
+    "INR": 3.3, "TRY": 8.5,
+}
 
 
-def estimate_trip_costs(
+def calculate_trip_costs(
     destination: str,
+    flight_cost_round_trip_per_person: float,
+    accommodation_per_night: float,
+    meals_per_day_per_person: float,
+    activities_per_day_per_person: float,
+    transport_per_day_per_person: float,
     duration_days: int,
     travelers: int = 1,
-    accommodation_tier: str = "mid_range",
-    currency: str = "PKR",
+    currency: str = "USD",
 ) -> dict:
     """
-    Estimate total trip costs broken down by category.
+    Calculate total trip cost from individual component costs found via google_search.
+
+    Call this AFTER using google_search to find real current prices for the destination.
 
     Args:
-        destination: City/destination name (e.g., "Lahore", "Dubai")
-        duration_days: Length of trip in days
+        destination: Destination name (e.g., "Tokyo", "Paris", "Lahore")
+        flight_cost_round_trip_per_person: Round-trip flight cost per person
+        accommodation_per_night: Hotel/hostel total cost per night (shared by group)
+        meals_per_day_per_person: Daily food cost per person
+        activities_per_day_per_person: Daily attractions/entry fees per person
+        transport_per_day_per_person: Daily local transport cost per person
+        duration_days: Trip length in days
         travelers: Number of travelers
-        accommodation_tier: "budget", "mid_range", "luxury", or "auto"
-        currency: Output currency code (default PKR)
+        currency: Currency of all input values (must be consistent)
 
     Returns:
-        dict with itemized costs and total in requested currency.
+        dict with complete cost breakdown, grand total, and daily average.
     """
-    dest = _find_destination(destination)
-    if not dest:
-        return {
-            "status": "error",
-            "message": f"Destination '{destination}' not found. Try: {', '.join(list(DESTINATIONS.keys())[:5])}",
-        }
+    flights_total = round(flight_cost_round_trip_per_person * travelers)
+    accommodation_total = round(accommodation_per_night * duration_days)
+    meals_total = round(meals_per_day_per_person * travelers * duration_days)
+    activities_total = round(activities_per_day_per_person * travelers * duration_days)
+    transport_total = round(transport_per_day_per_person * travelers * duration_days)
 
-    currency = currency.upper()
-    tier_key = accommodation_tier if accommodation_tier in ("budget", "mid_range", "luxury") else "mid_range"
-    costs = dest["costs_pkr"][tier_key]
-
-    daily_cost_pkr = sum(costs.values())
-    flight_pkr = dest.get("flight_from_karachi_pkr", 0) * travelers * 2
-    total_stay_pkr = daily_cost_pkr * duration_days * travelers
-
-    def fmt(pkr: float) -> float:
-        return convert_from_pkr(pkr, currency) if currency != "PKR" else pkr
+    grand_total = flights_total + accommodation_total + meals_total + activities_total + transport_total
+    daily_stay_cost = accommodation_per_night + (meals_per_day_per_person + activities_per_day_per_person + transport_per_day_per_person) * travelers
+    daily_avg_per_person = round(daily_stay_cost / max(travelers, 1))
 
     return {
         "status": "success",
         "destination": destination,
         "duration_days": duration_days,
         "travelers": travelers,
-        "accommodation_tier": tier_key,
         "currency": currency,
         "breakdown": {
-            "flights_round_trip": fmt(flight_pkr),
-            "accommodation": fmt(costs["accommodation"] * duration_days * travelers),
-            "meals": fmt(costs["meals"] * duration_days * travelers),
-            "activities": fmt(costs["activities"] * duration_days * travelers),
-            "local_transport": fmt(costs["local_transport"] * duration_days * travelers),
+            "flights_round_trip": flights_total,
+            "accommodation": accommodation_total,
+            "meals": meals_total,
+            "activities": activities_total,
+            "local_transport": transport_total,
         },
-        "per_person_total": fmt((daily_cost_pkr * duration_days) + dest.get("flight_from_karachi_pkr", 0) * 2),
-        "grand_total": fmt(total_stay_pkr + flight_pkr),
-        "daily_average_per_person": fmt(daily_cost_pkr),
-        "note": "Estimates based on historical averages. Actual costs may vary +/-20%.",
+        "grand_total": grand_total,
+        "daily_average_per_person": daily_avg_per_person,
+        "note": "Calculated from real-time web search data.",
     }
 
 
-def validate_budget(
-    destination: str,
+def get_budget_recommendation(
+    interests: str,
     duration_days: int,
-    budget: float,
     currency: str = "PKR",
-    travelers: int = 1,
 ) -> dict:
     """
-    Check if the user's budget is sufficient for the trip.
-    Returns a clear warning with minimum required budget if insufficient.
+    Provide rough global budget tier guidance as a starting point for planning.
+    Use google_search for destination-specific costs after reviewing these tiers.
 
     Args:
-        destination: Destination city name
-        duration_days: Trip length in days
-        budget: Total available budget
-        currency: Budget currency code
-        travelers: Number of travelers
-
-    Returns:
-        dict with feasibility verdict, gap analysis, and alternative suggestions.
-    """
-    currency = currency.upper()
-    budget_pkr = convert_to_pkr(budget, currency) if currency != "PKR" else budget
-
-    dest = _find_destination(destination)
-    if not dest:
-        return {"status": "error", "message": f"Destination '{destination}' not found."}
-
-    min_daily_pkr = sum(dest["costs_pkr"]["budget"].values())
-    flight_pkr = dest.get("flight_from_karachi_pkr", 0) * travelers * 2
-    min_total_pkr = (min_daily_pkr * duration_days * travelers) + flight_pkr
-
-    budget_per_day_pkr = budget_pkr / max(travelers, 1) / max(duration_days, 1)
-    is_feasible = budget_pkr >= min_total_pkr
-    is_tight = is_feasible and budget_pkr < min_total_pkr * 1.3
-    gap_pkr = max(0, min_total_pkr - budget_pkr)
-
-    alternatives = []
-    if not is_feasible:
-        alternatives = _suggest_budget_alternatives(budget_pkr, duration_days, travelers)
-
-    def fmt(pkr: float) -> str:
-        val = convert_from_pkr(pkr, currency) if currency != "PKR" else pkr
-        return f"{currency} {val:,.0f}"
-
-    return {
-        "status": "success",
-        "destination": destination,
-        "budget": f"{currency} {budget:,.0f}",
-        "required_minimum": fmt(min_total_pkr),
-        "gap": fmt(gap_pkr) if gap_pkr > 0 else "None",
-        "feasible": is_feasible,
-        "tight": is_tight,
-        "accommodation_tier_affordable": get_accommodation_tier(budget_per_day_pkr),
-        "verdict": _verdict(is_feasible, is_tight, destination, fmt(min_total_pkr), fmt(gap_pkr)),
-        "alternative_destinations": alternatives,
-    }
-
-
-def get_budget_recommendation(interests: str, duration_days: int, currency: str = "PKR") -> dict:
-    """
-    Suggest minimum and comfortable budgets for a trip based on interests and duration.
-
-    Args:
-        interests: Comma-separated interests
+        interests: Comma-separated interests (adventure, culture, food, beach, etc.)
         duration_days: Trip length in days
         currency: Output currency code
 
     Returns:
-        dict with budget tiers and what each covers.
+        dict with four budget tiers and what each typically covers.
     """
     currency = currency.upper()
-    tiers = {
-        "backpacker": 4500 * duration_days + 15000,
-        "comfortable": 10000 * duration_days + 30000,
-        "mid_range": 20000 * duration_days + 50000,
-        "luxury": 50000 * duration_days + 120000,
-    }
+    rate = _PKR_RATES.get(currency, 1.0)
 
-    def fmt(pkr: float) -> float:
-        return convert_from_pkr(pkr, currency) if currency != "PKR" else pkr
+    def from_pkr(amount: float) -> float:
+        return round(amount / rate) if currency != "PKR" else round(amount)
 
     return {
         "status": "success",
+        "note": "Rough global estimates only. Use google_search for destination-specific costs.",
+        "interests": interests,
         "duration_days": duration_days,
         "currency": currency,
         "budget_tiers": {
-            "backpacker": {"amount": fmt(tiers["backpacker"]), "covers": "Hostels, street food, public transport"},
-            "comfortable": {"amount": fmt(tiers["comfortable"]), "covers": "Budget hotels, local restaurants, key attractions"},
-            "mid_range": {"amount": fmt(tiers["mid_range"]), "covers": "3-star hotels, variety of restaurants, guided tours"},
-            "luxury": {"amount": fmt(tiers["luxury"]), "covers": "4-5 star hotels, fine dining, premium activities"},
+            "backpacker": {
+                "amount": from_pkr(4_500 * duration_days + 15_000),
+                "covers": "Hostels, street food, public transport, free attractions",
+            },
+            "comfortable": {
+                "amount": from_pkr(10_000 * duration_days + 30_000),
+                "covers": "Budget hotels, local restaurants, key attractions",
+            },
+            "mid_range": {
+                "amount": from_pkr(20_000 * duration_days + 50_000),
+                "covers": "3-star hotels, varied dining, guided tours",
+            },
+            "luxury": {
+                "amount": from_pkr(50_000 * duration_days + 120_000),
+                "covers": "4–5 star hotels, fine dining, premium experiences",
+            },
         },
     }
-
-
-def _find_destination(name: str) -> dict | None:
-    name_lower = name.lower()
-    for dest_name, dest in DESTINATIONS.items():
-        if dest_name.lower() == name_lower or name_lower in dest_name.lower():
-            return dest
-    return None
-
-
-def _verdict(feasible: bool, tight: bool, destination: str, required: str, gap: str) -> str:
-    if not feasible:
-        return (
-            f"Budget too low for {destination}. You need at least {required}. "
-            f"You are short by {gap}. Consider local/nearby destinations or increasing your budget."
-        )
-    if tight:
-        return (
-            f"Budget is barely sufficient for {destination} on a strict backpacker plan. "
-            "Recommend adding 30% buffer for comfort."
-        )
-    return f"Budget is comfortable for {destination}."
-
-
-def _suggest_budget_alternatives(budget_pkr: float, duration_days: int, travelers: int) -> list[dict]:
-    suggestions = []
-    for name, dest in DESTINATIONS.items():
-        min_daily = sum(dest["costs_pkr"]["budget"].values())
-        flight = dest.get("flight_from_karachi_pkr", 0) * travelers * 2
-        if budget_pkr >= (min_daily * duration_days * travelers) + flight:
-            suggestions.append({
-                "destination": name,
-                "country": dest["country"],
-                "interests": dest["interests"][:3],
-            })
-    return suggestions[:4]

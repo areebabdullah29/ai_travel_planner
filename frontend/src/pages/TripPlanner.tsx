@@ -4,16 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send, Sparkles, Plane, RefreshCw, Zap, RotateCcw,
   MapPin, Clock, Users, Thermometer, Heart, Coins, Search,
-  Maximize2, Minimize2
+  Maximize2, Minimize2, X, Star, Calendar, TrendingUp, CheckCircle
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
-import {
-  TRAVEL_SYSTEM_PROMPT,
-  parsePreferencesFromResponse,
-  generateTripPlan,
-  generateMockPlan,
-} from '@/services/claudeService'
-import type { Message } from '@/types'
+import { streamChat, deleteSession, buildTripPlanFromAgent } from '@/services/agentService'
+import type { Message, TripPlan } from '@/types'
 
 const CURRENCIES = [
   { code: 'PKR', flag: '🇵🇰', name: 'Pakistani Rupee' },
@@ -28,18 +23,9 @@ const CURRENCIES = [
   { code: 'TRY', flag: '🇹🇷', name: 'Turkish Lira' },
 ]
 
-// Default budget per currency (sensible amounts for a 7-day trip)
 const DEFAULT_BUDGETS: Record<string, number> = {
-  PKR: 400000,
-  USD: 1500,
-  EUR: 1400,
-  GBP: 1200,
-  AED: 5500,
-  SAR: 5600,
-  CAD: 2000,
-  AUD: 2300,
-  INR: 125000,
-  TRY: 45000,
+  PKR: 400000, USD: 1500, EUR: 1400, GBP: 1200,
+  AED: 5500, SAR: 5600, CAD: 2000, AUD: 2300, INR: 125000, TRY: 45000,
 }
 
 const INITIAL_MESSAGE: Message = {
@@ -64,6 +50,60 @@ const QUICK_PROMPTS = [
   { icon: '🦁', text: 'African safari for 8 days' },
   { icon: '🍜', text: 'Food & culture tour in SE Asia' },
 ]
+
+// ── Preference extraction helpers ─────────────────────────────────────────
+
+type DestInfo = { dest: string; style: string; interests: string[] }
+
+const DEST_MAP: Array<{ kw: string[]; info: DestInfo }> = [
+  { kw: ['paris', 'france'],                                                              info: { dest: 'Paris',            style: 'Romantic',   interests: ['culture', 'food', 'art'] } },
+  { kw: ['thailand', 'bangkok', 'phuket', 'chiang mai', 'pattaya', 'koh samui', 'krabi'],info: { dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'] } },
+  { kw: ['japan', 'tokyo', 'kyoto', 'osaka', 'hiroshima'],                               info: { dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'] } },
+  { kw: ['singapore', 'sentosa', 'marina bay'],                                          info: { dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'] } },
+  { kw: ['london', 'uk', 'england', 'britain'],                                          info: { dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'] } },
+  { kw: ['dubai', 'uae', 'emirates', 'abu dhabi'],                                       info: { dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'] } },
+  { kw: ['bali', 'indonesia'],                                                            info: { dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'] } },
+  { kw: ['istanbul', 'turkey'],                                                           info: { dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'] } },
+  { kw: ['kuala lumpur', 'malaysia'],                                                     info: { dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'] } },
+  { kw: ['barcelona', 'spain'],                                                           info: { dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'] } },
+  { kw: ['rome', 'italy'],                                                                info: { dest: 'Rome',              style: 'Cultural',   interests: ['history', 'art', 'food'] } },
+  { kw: ['morocco', 'marrakech', 'casablanca'],                                           info: { dest: 'Marrakech',         style: 'Cultural',   interests: ['culture', 'bazaar', 'food'] } },
+  { kw: ['vietnam', 'hanoi', 'ho chi', 'saigon', 'hoi an'],                              info: { dest: 'Hanoi',             style: 'Cultural',   interests: ['culture', 'food', 'history'] } },
+  { kw: ['egypt', 'cairo', 'pyramids'],                                                   info: { dest: 'Cairo',             style: 'Cultural',   interests: ['history', 'pyramids', 'culture'] } },
+  { kw: ['greece', 'athens', 'santorini', 'mykonos'],                                    info: { dest: 'Athens',            style: 'Cultural',   interests: ['history', 'beaches', 'food'] } },
+  { kw: ['pakistan', 'hunza', 'skardu', 'lahore', 'islamabad', 'swat', 'murree'],        info: { dest: 'Lahore',            style: 'Cultural',   interests: ['culture', 'food', 'history'] } },
+  { kw: ['maldives', 'maldive'],                                                          info: { dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'] } },
+  { kw: ['africa', 'safari', 'kenya', 'nairobi', 'masai mara', 'serengeti'],             info: { dest: 'Nairobi',           style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'] } },
+  { kw: ['nepal', 'kathmandu', 'everest', 'pokhara'],                                    info: { dest: 'Kathmandu',         style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'] } },
+  { kw: ['new york', 'nyc', 'manhattan', 'usa', 'america', 'united states'],             info: { dest: 'New York',          style: 'Cultural',   interests: ['city', 'culture', 'food'] } },
+  { kw: ['australia', 'sydney', 'melbourne', 'brisbane'],                                info: { dest: 'Sydney',            style: 'Mixed',      interests: ['beaches', 'culture', 'nature'] } },
+]
+
+function extractDays(text: string): number | null {
+  const wk = text.match(/\b(\d+)\s*week/i)
+  if (wk) return +wk[1] * 7
+  const day = text.match(/\b(\d+)\s*(?:day|days|night|nights)\b/i)
+  return day ? +day[1] : null
+}
+
+function extractBudget(text: string): number | null {
+  const clean = text.replace(/,/g, '')
+  const k = clean.match(/\b(\d+(?:\.\d+)?)\s*[kK]\b/)
+  if (k) return Math.round(+k[1] * 1000)
+  const lac = clean.match(/\b(\d+(?:\.\d+)?)\s*(?:lac|lakh|lacs|lakhs)\b/i)
+  if (lac) return Math.round(+lac[1] * 100000)
+  const cur = clean.match(/\b(\d{3,})\s*(?:pkr|usd|gbp|eur|aed|sar|inr|cad|aud|try)\b/i)
+  if (cur) return +cur[1]
+  const word = clean.match(/budget\s*(?:of|is|:)?\s*(\d{3,})/i)
+  return word ? +word[1] : null
+}
+
+function extractDestination(text: string): DestInfo | null {
+  const msg = text.toLowerCase()
+  return DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info ?? null
+}
+
+// ── Typing indicator ──────────────────────────────────────────────────────
 
 interface AITypingProps { active: boolean }
 function AITyping({ active }: AITypingProps) {
@@ -95,19 +135,23 @@ export default function TripPlanner() {
   const [isTyping, setIsTyping] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showGenerateButton, setShowGenerateButton] = useState(false)
-  const [extractedPreferences, setExtractedPreferences] = useState<ReturnType<typeof parsePreferencesFromResponse> | null>(null)
-  const [conversationHistory, setConversationHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const [extractedPreferences, setExtractedPreferences] = useState<{
+    destination: string; days: number; budget: number
+  } | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const [selectedCurrency, setSelectedCurrency] = useState('PKR')
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showPlanPreview, setShowPlanPreview] = useState(false)
+  const [builtPlan, setBuiltPlan] = useState<TripPlan | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const initialQuerySentRef = useRef(false)
-  // Tracks the destination, days, and budget across all conversation turns
-  const detectedDestinationRef = useRef<{ dest: string; style: string; interests: string[] } | null>(null)
+  const detectedDestinationRef = useRef<DestInfo | null>(null)
   const detectedDaysRef = useRef<number | null>(null)
   const detectedBudgetRef = useRef<number | null>(null)
+
   const navigate = useNavigate()
   const location = useLocation()
   const { setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory } = useTripContext()
@@ -115,517 +159,6 @@ export default function TripPlanner() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
-
-  const generateSmartResponse = useCallback((userMessage: string, turnCount: number): string => {
-    const msg = userMessage.toLowerCase()
-    const cur = selectedCurrency
-    const defaultBudget = DEFAULT_BUDGETS[cur] ?? 1500
-
-    // ── Shared types and helpers (declared first so smart shortcut can use them) ──
-    // minPerDayPKR = minimum recommended daily budget in PKR for a comfortable trip (optional, defaults to 20000)
-    type DestInfo = { dest: string; style: string; interests: string[]; minPerDayPKR?: number }
-    const setDest = (d: DestInfo) => { detectedDestinationRef.current = d; return d }
-
-    // ── Extract duration from message ─────────────────────────────────────────
-    const wkMatch = userMessage.match(/\b(\d+)\s*week/i)
-    const dayMatch = userMessage.match(/\b(\d+)\s*(?:day|days|night|nights)\b/i)
-    const extractedDays = wkMatch ? +wkMatch[1] * 7 : dayMatch ? +dayMatch[1] : null
-    if (extractedDays) detectedDaysRef.current = extractedDays
-    const knownDays = extractedDays ?? detectedDaysRef.current
-
-    // ── Extract budget from message ───────────────────────────────────────────
-    const cleanText = userMessage.replace(/,/g, '')
-    const kBudget = cleanText.match(/\b(\d+(?:\.\d+)?)\s*[kK]\b/)
-    const lacBudget = cleanText.match(/\b(\d+(?:\.\d+)?)\s*(?:lac|lakh|lacs|lakhs)\b/i)
-    const curBudget = cleanText.match(/\b(\d{3,})\s*(?:pkr|usd|gbp|eur|aed|sar|inr|cad|aud|try)\b/i)
-    const wordBudget = cleanText.match(/budget\s*(?:of|is|:)?\s*(\d{3,})/i)
-    const extractedBudget = kBudget ? Math.round(+kBudget[1] * 1000)
-      : lacBudget ? Math.round(+lacBudget[1] * 100000)
-      : curBudget ? +curBudget[1]
-      : wordBudget ? +wordBudget[1]
-      : null
-    if (extractedBudget) detectedBudgetRef.current = extractedBudget
-    const knownBudget = extractedBudget ?? detectedBudgetRef.current
-
-    // ── Multi-city detection (checked BEFORE the single-city DEST_MAP) ─────────
-    const multiCity: DestInfo | null = (() => {
-      // Thailand combinations
-      if (msg.includes('pattaya') && msg.includes('bangkok'))
-        return { dest: 'Bangkok & Pattaya, Thailand',  style: 'Mixed',      interests: ['culture', 'food', 'beach', 'nightlife'], minPerDayPKR: 22000 }
-      if (msg.includes('phuket') && msg.includes('bangkok'))
-        return { dest: 'Bangkok & Phuket, Thailand',   style: 'Mixed',      interests: ['culture', 'food', 'beach'],              minPerDayPKR: 25000 }
-      if (msg.includes('phuket') && msg.includes('chiang mai'))
-        return { dest: 'Phuket & Chiang Mai, Thailand',style: 'Mixed',      interests: ['beach', 'culture', 'food'],              minPerDayPKR: 22000 }
-      if (msg.includes('pattaya') && msg.includes('chiang mai'))
-        return { dest: 'Pattaya & Chiang Mai, Thailand',style: 'Mixed',     interests: ['beach', 'culture', 'food'],              minPerDayPKR: 20000 }
-      // Japan combinations
-      if (msg.includes('tokyo') && msg.includes('kyoto') && msg.includes('osaka'))
-        return { dest: 'Tokyo, Kyoto & Osaka, Japan',  style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 48000 }
-      if (msg.includes('tokyo') && msg.includes('kyoto'))
-        return { dest: 'Tokyo & Kyoto, Japan',         style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 46000 }
-      if (msg.includes('tokyo') && msg.includes('osaka'))
-        return { dest: 'Tokyo & Osaka, Japan',         style: 'Cultural',   interests: ['culture', 'food', 'technology'],         minPerDayPKR: 46000 }
-      // UAE combinations
-      if (msg.includes('dubai') && msg.includes('abu dhabi'))
-        return { dest: 'Dubai & Abu Dhabi, UAE',       style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'],    minPerDayPKR: 55000 }
-      // Pakistan combinations
-      if (msg.includes('hunza') && msg.includes('skardu'))
-        return { dest: 'Hunza & Skardu, Pakistan',     style: 'Adventure',  interests: ['trekking', 'mountains', 'nature'],       minPerDayPKR: 9000  }
-      if (msg.includes('lahore') && msg.includes('islamabad'))
-        return { dest: 'Lahore & Islamabad, Pakistan', style: 'Cultural',   interests: ['culture', 'food', 'history'],            minPerDayPKR: 7000  }
-      // Europe combinations
-      if (msg.includes('paris') && msg.includes('rome'))
-        return { dest: 'Paris & Rome',                 style: 'Cultural',   interests: ['culture', 'food', 'art'],                minPerDayPKR: 50000 }
-      if (msg.includes('paris') && msg.includes('barcelona'))
-        return { dest: 'Paris & Barcelona',            style: 'Cultural',   interests: ['culture', 'food', 'architecture'],       minPerDayPKR: 48000 }
-      return null
-    })()
-
-    // ── Inline destination detection ──────────────────────────────────────────
-    const DEST_MAP: Array<{ kw: string[]; info: DestInfo }> = [
-      { kw: ['paris', 'france'],                                                              info: { dest: 'Paris',            style: 'Romantic',   interests: ['culture', 'food', 'art'],             minPerDayPKR: 45000 } },
-      { kw: ['thailand', 'bangkok', 'phuket', 'chiang mai', 'pattaya', 'koh samui', 'krabi'],info: { dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'],          minPerDayPKR: 20000 } },
-      { kw: ['japan', 'tokyo', 'kyoto', 'osaka', 'hiroshima'],                               info: { dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'],       minPerDayPKR: 45000 } },
-      { kw: ['singapore', 'sentosa', 'marina bay'],                                          info: { dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'],            minPerDayPKR: 35000 } },
-      { kw: ['london', 'uk', 'england', 'britain'],                                          info: { dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'],       minPerDayPKR: 50000 } },
-      { kw: ['dubai', 'uae', 'emirates', 'abu dhabi'],                                       info: { dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'],  minPerDayPKR: 50000 } },
-      { kw: ['bali', 'indonesia'],                                                            info: { dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'],         minPerDayPKR: 18000 } },
-      { kw: ['istanbul', 'turkey'],                                                           info: { dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'],          minPerDayPKR: 22000 } },
-      { kw: ['kuala lumpur', 'malaysia'],                                                     info: { dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'],             minPerDayPKR: 18000 } },
-      { kw: ['barcelona', 'spain'],                                                           info: { dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'],     minPerDayPKR: 40000 } },
-      { kw: ['rome', 'italy'],                                                                info: { dest: 'Rome, Italy',       style: 'Cultural',   interests: ['history', 'art', 'food'],              minPerDayPKR: 38000 } },
-      { kw: ['morocco', 'marrakech', 'casablanca'],                                           info: { dest: 'Marrakech, Morocco',style: 'Cultural',   interests: ['culture', 'bazaar', 'food'],           minPerDayPKR: 20000 } },
-      { kw: ['vietnam', 'hanoi', 'ho chi', 'saigon', 'hoi an'],                              info: { dest: 'Hanoi, Vietnam',    style: 'Cultural',   interests: ['culture', 'food', 'history'],          minPerDayPKR: 15000 } },
-      { kw: ['egypt', 'cairo', 'pyramids'],                                                   info: { dest: 'Cairo, Egypt',      style: 'Cultural',   interests: ['history', 'pyramids', 'culture'],      minPerDayPKR: 22000 } },
-      { kw: ['greece', 'athens', 'santorini', 'mykonos'],                                    info: { dest: 'Athens, Greece',    style: 'Cultural',   interests: ['history', 'beaches', 'food'],          minPerDayPKR: 38000 } },
-      { kw: ['pakistan', 'hunza', 'skardu', 'lahore', 'islamabad', 'swat', 'murree'],        info: { dest: 'Hunza Valley',      style: 'Adventure',  interests: ['trekking', 'mountains', 'nature'],     minPerDayPKR:  8000 } },
-      { kw: ['maldives', 'maldive'],                                                          info: { dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'],   minPerDayPKR: 80000 } },
-      { kw: ['africa', 'safari', 'kenya', 'nairobi', 'masai mara', 'serengeti'],             info: { dest: 'Nairobi, Kenya',    style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'],        minPerDayPKR: 25000 } },
-      { kw: ['nepal', 'kathmandu', 'everest', 'pokhara'],                                    info: { dest: 'Kathmandu, Nepal',  style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'],    minPerDayPKR: 15000 } },
-      { kw: ['new york', 'nyc', 'manhattan', 'usa', 'america', 'united states'],             info: { dest: 'New York, USA',     style: 'Cultural',   interests: ['city', 'culture', 'food'],             minPerDayPKR: 55000 } },
-      { kw: ['australia', 'sydney', 'melbourne', 'brisbane'],                                info: { dest: 'Sydney, Australia', style: 'Mixed',      interests: ['beaches', 'culture', 'nature'],        minPerDayPKR: 50000 } },
-    ]
-    const inlineDest = multiCity
-      ?? DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info
-      ?? (detectedDestinationRef.current as DestInfo | null)
-
-    // ── Budget-to-PKR conversion (for minimum budget check) ──────────────────
-    const toPKR: Record<string, number> = {
-      PKR: 1, USD: 280, EUR: 305, GBP: 355,
-      AED: 76, SAR: 75, CAD: 207, AUD: 180, INR: 1 / 3.4, TRY: 9,
-    }
-
-    // ── Helper: build the "generate" JSON block ───────────────────────────────
-    const makeGenerateJSON = (d: DestInfo, days: number, budget: number) => `\`\`\`json
-{
-  "readyToGenerate": true,
-  "preferences": {
-    "budget": ${budget},
-    "currency": "${cur}",
-    "duration": ${days},
-    "interests": ${JSON.stringify(d.interests)},
-    "weather": "mild",
-    "travelStyle": "${d.style}",
-    "departureCity": "Your city",
-    "groupType": "solo"
-  },
-  "suggestedDestination": "${d.dest}"
-}
-\`\`\``
-
-    // ── Smart shortcut: all info known (current + remembered) → validate budget → generate ──
-    if (knownDays && knownBudget && inlineDest) {
-      const budgetPKR   = Math.round(knownBudget * (toPKR[cur] ?? 1))
-      const minPerDay   = inlineDest.minPerDayPKR ?? 20000
-      const minTotalPKR = minPerDay * knownDays
-      const minDisplay  = Math.round(minTotalPKR / (toPKR[cur] ?? 1))
-      const ratio       = budgetPKR / minTotalPKR
-
-      if (ratio < 0.5) {
-        const feasibleDays = Math.max(2, Math.floor(budgetPKR / minPerDay))
-        return `Hmm, **${knownBudget.toLocaleString()} ${cur}** for **${knownDays} days** in **${inlineDest.dest}** is quite tight — it won't comfortably cover flights, accommodation, meals, and activities. 😬
-
-For a decent **${knownDays}-day** trip to ${inlineDest.dest}, the recommended minimum is around **${minDisplay.toLocaleString()} ${cur}**.
-
-Here are your options:
-- 💰 **Increase your budget** to at least **${minDisplay.toLocaleString()} ${cur}** — I'll plan a great trip!
-- 📅 **Shorten the trip** — with ${knownBudget.toLocaleString()} ${cur} you could comfortably do **${feasibleDays} days** in ${inlineDest.dest}
-- ✈️ **Choose a cheaper destination** — Vietnam, Morocco, Bali, or Pakistan are all great on a tighter budget
-
-What would you like to do?`
-      }
-
-      setDest(inlineDest)
-
-      if (ratio < 0.8) {
-        return `Budget noted! **${knownBudget.toLocaleString()} ${cur}** for ${knownDays} days in **${inlineDest.dest}** is a little under the recommended **${minDisplay.toLocaleString()} ${cur}**, but I can still put together a solid budget-friendly plan for you! 🤏
-
-- 📍 **Destination**: ${inlineDest.dest}
-- 📅 **Duration**: ${knownDays} days
-- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} _(budget-friendly mode)_
-
-I'll prioritise affordable guesthouses, street food, and free or low-cost activities to make every rupee count. Click **"Generate My Trip Plan"** to proceed!
-
-${makeGenerateJSON(inlineDest, knownDays, knownBudget)}`
-      }
-
-      return `Got it — I have everything I need! 🎯
-
-- 📍 **Destination**: ${inlineDest.dest}
-- 📅 **Duration**: ${knownDays} days
-- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur}
-
-Click **"Generate My Trip Plan"** below for your complete personalised itinerary!
-
-${makeGenerateJSON(inlineDest, knownDays, knownBudget)}`
-    }
-
-    // ── Partial-info: handle every 1-of-3 or 2-of-3 combination ─────────────
-    // inlineDest already falls back to detectedDestinationRef via the ?? above.
-    const knownDest = inlineDest   // null when truly unknown
-    if (knownDest) setDest(knownDest)
-
-    // dest + budget, missing days
-    if (knownDest && knownBudget && !knownDays) {
-      return `Budget locked in — **${knownBudget.toLocaleString()} ${cur}**! 💰
-
-- 📍 **Destination**: ${knownDest.dest} ✅
-- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} ✅
-- 📅 **Duration**: How many days are you planning?`
-    }
-
-    // dest + days, missing budget
-    if (knownDest && knownDays && !knownBudget) {
-      return `${knownDays} days in **${knownDest.dest}** — great choice! ✈️
-
-- 📍 **Destination**: ${knownDest.dest} ✅
-- 📅 **Duration**: ${knownDays} days ✅
-- 💰 **Budget**: What's your total budget in ${cur}?`
-    }
-
-    // days + budget, missing destination
-    if (!knownDest && knownDays && knownBudget) {
-      return `**${knownDays} days** with a **${knownBudget.toLocaleString()} ${cur}** budget — let's plan! 🌍
-
-Just tell me your destination and I'll generate your complete itinerary instantly!`
-    }
-
-    // only budget given
-    if (knownBudget && !knownDays && !knownDest) {
-      return `Budget of **${knownBudget.toLocaleString()} ${cur}** noted! 💰
-
-Where would you like to go, and for how many days?`
-    }
-
-    // only days given
-    if (knownDays && !knownBudget && !knownDest) {
-      return `**${knownDays} days** — perfect trip length! ✈️
-
-Where would you like to go, and what's your total budget in ${cur}?`
-    }
-
-    // Helper: pick destination from current message keywords, also updating detectedDestinationRef
-    const pickDestination = (): DestInfo => {
-      if (detectedDestinationRef.current) return detectedDestinationRef.current as DestInfo
-      if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain'))
-        return setDest({ dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'],      minPerDayPKR: 50000 })
-      if (msg.includes('paris') || msg.includes('france'))
-        return setDest({ dest: 'Paris',             style: 'Romantic',   interests: ['culture', 'food', 'art'],             minPerDayPKR: 45000 })
-      if (msg.includes('spain') || msg.includes('barcelona'))
-        return setDest({ dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'],    minPerDayPKR: 40000 })
-      if (msg.includes('rome') || msg.includes('italy') || msg.includes('italian'))
-        return setDest({ dest: 'Rome, Italy',       style: 'Cultural',   interests: ['history', 'art', 'food'],             minPerDayPKR: 38000 })
-      if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates') || msg.includes('abu dhabi'))
-        return setDest({ dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'], minPerDayPKR: 50000 })
-      if (msg.includes('turkey') || msg.includes('istanbul'))
-        return setDest({ dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'],         minPerDayPKR: 22000 })
-      if (msg.includes('bali') || msg.includes('indonesia'))
-        return setDest({ dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'],        minPerDayPKR: 18000 })
-      if (msg.includes('malaysia') || msg.includes('kuala lumpur') || msg.includes(' kl ') || msg.includes('kl,'))
-        return setDest({ dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'],            minPerDayPKR: 18000 })
-      if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui'))
-        return setDest({ dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'],         minPerDayPKR: 20000 })
-      if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima'))
-        return setDest({ dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'],      minPerDayPKR: 45000 })
-      if (msg.includes('singapore') || msg.includes(' sg ') || msg.includes('sentosa') || msg.includes('marina bay'))
-        return setDest({ dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'],           minPerDayPKR: 35000 })
-      if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca') || msg.includes('fes'))
-        return setDest({ dest: 'Marrakech, Morocco',style: 'Cultural',   interests: ['culture', 'bazaar', 'food'],          minPerDayPKR: 20000 })
-      if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon'))
-        return setDest({ dest: 'Hanoi, Vietnam',    style: 'Cultural',   interests: ['culture', 'food', 'history'],         minPerDayPKR: 15000 })
-      if (msg.includes('maldives') || msg.includes('maldive'))
-        return setDest({ dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'],  minPerDayPKR: 80000 })
-      if (msg.includes('nepal') || msg.includes('everest') || msg.includes('kathmandu'))
-        return setDest({ dest: 'Kathmandu, Nepal',  style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'],   minPerDayPKR: 15000 })
-      if (msg.includes('africa') || msg.includes('safari') || msg.includes('kenya') || msg.includes('nairobi'))
-        return setDest({ dest: 'Nairobi, Kenya',    style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'],       minPerDayPKR: 25000 })
-      if (msg.includes('new york') || msg.includes('nyc') || msg.includes('manhattan') || msg.includes('america') || msg.includes('usa') || msg.includes('united states'))
-        return setDest({ dest: 'New York, USA',     style: 'Cultural',   interests: ['city', 'culture', 'food'],            minPerDayPKR: 55000 })
-      if (msg.includes('australia') || msg.includes('sydney') || msg.includes('melbourne'))
-        return setDest({ dest: 'Sydney, Australia', style: 'Mixed',      interests: ['beaches', 'culture', 'nature'],       minPerDayPKR: 50000 })
-      if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids'))
-        return setDest({ dest: 'Cairo, Egypt',      style: 'Cultural',   interests: ['history', 'pyramids', 'culture'],     minPerDayPKR: 22000 })
-      if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos'))
-        return setDest({ dest: 'Athens, Greece',    style: 'Cultural',   interests: ['history', 'beaches', 'food'],         minPerDayPKR: 38000 })
-      // Default: rotate through popular destinations
-      const defaults: DestInfo[] = [
-        { dest: 'Bangkok',   style: 'Cultural',   interests: ['culture', 'food', 'temples'],  minPerDayPKR: 20000 },
-        { dest: 'Istanbul',  style: 'Cultural',   interests: ['history', 'culture', 'food'],  minPerDayPKR: 22000 },
-        { dest: 'Bali',      style: 'Relaxation', interests: ['beach', 'culture', 'food'],    minPerDayPKR: 18000 },
-        { dest: 'Dubai',     style: 'Luxury',     interests: ['luxury', 'shopping', 'city'],  minPerDayPKR: 50000 },
-      ]
-      const d = defaults[turnCount % defaults.length]
-      detectedDestinationRef.current = d
-      return d
-    }
-
-    // Generic greeting ONLY when nothing useful was detected at all
-    if ((turnCount === 0 || msg.includes('hello') || msg.includes('hi')) && !knownDest && !knownDays && !knownBudget) {
-      return `Great to meet you! 🌍 I'm excited to help plan your trip.
-
-Tell me your dream destination (or a region), how many days, and your budget — I'll handle the rest!`
-    }
-
-    // Helper: build a "what's still missing" reply for destination-only messages
-    const missingAfterDest = (_emoji: string, destName: string, note: string): string => {
-      const daysLine = knownDays ? `- 📅 **Duration**: ${knownDays} days ✅` : `- 📅 **Duration**: How many days are you planning?`
-      const budgetLine = knownBudget ? `- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur} ✅` : `- 💰 **Budget**: What's your total budget in ${cur}?`
-      const allSet = knownDays && knownBudget
-      return `${note}
-
-Here's what I have so far:
-- 📍 **Destination**: ${destName} ✅
-${daysLine}
-${budgetLine}${allSet ? '\n\nI have everything I need — click **"Generate My Trip Plan"** below! 🎯' : '\n\nJust reply with the missing details and I\'ll generate your plan instantly!'}`
-    }
-
-    // Helper: if dest is now known and we already have days + budget, auto-generate
-    const autoGenerateIfComplete = (d: DestInfo): string | null => {
-      if (!knownDays || !knownBudget) return null
-      setDest(d)
-      const budgetPKR   = Math.round(knownBudget * (toPKR[cur] ?? 1))
-      const minTotalPKR = (d.minPerDayPKR ?? 20000) * knownDays
-      const ratio       = budgetPKR / minTotalPKR
-      if (ratio < 0.5) return null  // Let the budget-warning path handle it on next check
-      return `Got it — I have everything I need! 🎯
-
-- 📍 **Destination**: ${d.dest}
-- 📅 **Duration**: ${knownDays} days
-- 💰 **Budget**: ${knownBudget.toLocaleString()} ${cur}
-
-Click **"Generate My Trip Plan"** below for your complete personalised itinerary!
-
-${makeGenerateJSON(d, knownDays, knownBudget)}`
-    }
-
-    if (msg.includes('pakistan') || msg.includes('hunza') || msg.includes('northern') || msg.includes('skardu') || msg.includes('lahore') || msg.includes('islamabad') || msg.includes('swat') || msg.includes('murree')) {
-      const d: DestInfo = { dest: 'Hunza Valley', style: 'Adventure', interests: ['trekking', 'mountains', 'nature'] }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏔️', 'Hunza Valley, Pakistan', 'Pakistan is absolutely stunning! 🏔️ The northern areas — Hunza, Skardu, Fairy Meadows — are breathtaking.'))
-    }
-
-    if (msg.includes('thailand') || msg.includes('bangkok') || msg.includes('phuket') || msg.includes('chiang mai') || msg.includes('pattaya') || msg.includes('koh samui') || msg.includes('krabi')) {
-      const d: DestInfo = { dest: 'Bangkok', style: 'Cultural', interests: ['culture', 'food', 'temples'], minPerDayPKR: 20000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🇹🇭', 'Bangkok, Thailand', "Thailand is incredible! 🇹🇭🏯 Glittering temples, Phuket beaches, and Chiang Mai's night bazaars."))
-    }
-
-    if (msg.includes('japan') || msg.includes('tokyo') || msg.includes('kyoto') || msg.includes('osaka') || msg.includes('hiroshima')) {
-      const d: DestInfo = { dest: 'Tokyo', style: 'Cultural', interests: ['culture', 'food', 'technology'], minPerDayPKR: 45000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🗼', 'Tokyo, Japan', "Japan is a magical destination! 🗼🌸 Tokyo's futuristic skyline, Kyoto's ancient temples, and incredible food."))
-    }
-
-    if (msg.includes('singapore') || msg.includes('marina bay') || msg.includes('sentosa')) {
-      const d: DestInfo = { dest: 'Singapore', style: 'Luxury', interests: ['food', 'shopping', 'city'], minPerDayPKR: 35000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🇸🇬', 'Singapore', 'Singapore is a world-class city-state! 🇸🇬✨ Marina Bay Sands, Gardens by the Bay, and incredible food.'))
-    }
-
-    if (msg.includes('london') || msg.includes('uk') || msg.includes('england') || msg.includes('britain')) {
-      const d: DestInfo = { dest: 'London', style: 'Cultural', interests: ['culture', 'history', 'museums'], minPerDayPKR: 50000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'London, UK', "London is a world-class city! 🏙️🎭 Buckingham Palace, the British Museum, West End shows, and an incredible food scene."))
-    }
-
-    if (msg.includes('paris') || msg.includes('france')) {
-      const d: DestInfo = { dest: 'Paris', style: 'Romantic', interests: ['culture', 'food', 'art'], minPerDayPKR: 45000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🗼', 'Paris, France', 'Paris, the City of Light! 🗼✨ The Eiffel Tower, Louvre, and world-famous cuisine await.'))
-    }
-
-    if (msg.includes('dubai') || msg.includes('uae') || msg.includes('emirates')) {
-      const d: DestInfo = { dest: 'Dubai', style: 'Luxury', interests: ['luxury', 'shopping', 'architecture'], minPerDayPKR: 50000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'Dubai, UAE', 'Dubai — where luxury meets adventure! 🏙️✨ Burj Khalifa, desert safaris, and world-class dining.'))
-    }
-
-    if (msg.includes('bali') || msg.includes('indonesia')) {
-      const d: DestInfo = { dest: 'Bali', style: 'Relaxation', interests: ['beach', 'temples', 'culture'], minPerDayPKR: 18000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🌴', 'Bali, Indonesia', 'Bali is simply magical! 🌴🌺 Stunning temples, rice terraces, beaches, and vibrant culture.'))
-    }
-
-    if (msg.includes('istanbul') || (msg.includes('turkey') && !msg.includes('turkey sandwich'))) {
-      const d: DestInfo = { dest: 'Istanbul', style: 'Cultural', interests: ['history', 'culture', 'food'], minPerDayPKR: 22000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🕌', 'Istanbul, Turkey', 'Istanbul — where East meets West! 🕌🌉 Ancient bazaars, the Hagia Sophia, and incredible food.'))
-    }
-
-    if (msg.includes('kuala lumpur') || msg.includes('malaysia') || msg.includes(' kl ') || msg.includes('kl,')) {
-      const d: DestInfo = { dest: 'Kuala Lumpur', style: 'Mixed', interests: ['food', 'culture', 'city'], minPerDayPKR: 18000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏙️', 'Kuala Lumpur, Malaysia', 'Kuala Lumpur is vibrant and affordable! 🏙️🌃 Petronas Towers, amazing street food, and colonial charm.'))
-    }
-
-    if (msg.includes('morocco') || msg.includes('marrakech') || msg.includes('casablanca')) {
-      const d: DestInfo = { dest: 'Marrakech, Morocco', style: 'Cultural', interests: ['culture', 'bazaar', 'food'], minPerDayPKR: 20000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🕌', 'Marrakech, Morocco', "Morocco is enchanting! 🕌🌺 Marrakech's medinas, the Sahara Desert, and incredible cuisine."))
-    }
-
-    if (msg.includes('egypt') || msg.includes('cairo') || msg.includes('pyramids') || msg.includes('luxor')) {
-      const d: DestInfo = { dest: 'Cairo, Egypt', style: 'Cultural', interests: ['history', 'pyramids', 'culture'], minPerDayPKR: 22000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏺', 'Cairo, Egypt', "Egypt — one of history's greatest civilizations! 🏺🌅 The Pyramids, the Nile, and ancient temples."))
-    }
-
-    if (msg.includes('greece') || msg.includes('athens') || msg.includes('santorini') || msg.includes('mykonos')) {
-      const d: DestInfo = { dest: 'Athens, Greece', style: 'Cultural', interests: ['history', 'beaches', 'food'], minPerDayPKR: 38000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🏛️', 'Athens, Greece', 'Greece is breathtaking! 🏛️⛵ Ancient history, stunning island scenery, and amazing Mediterranean food.'))
-    }
-
-    if (msg.includes('vietnam') || msg.includes('hanoi') || msg.includes('ho chi') || msg.includes('saigon') || msg.includes('hoi an')) {
-      const d: DestInfo = { dest: 'Hanoi, Vietnam', style: 'Cultural', interests: ['culture', 'food', 'history'], minPerDayPKR: 15000 }
-      return autoGenerateIfComplete(d) ?? (setDest(d), missingAfterDest('🌿', 'Hanoi, Vietnam', "Vietnam is a traveler's dream! 🌿🍜 Ancient culture, incredible street food, and stunning landscapes."))
-    }
-
-    if (msg.includes('budget') || msg.match(/\$[\d,]+/) || msg.match(/\d+\s*(usd|pkr|gbp|eur|aed|sar|inr|cad|aud|try)/i)) {
-      return `Perfect, I've noted your budget! 💰
-
-Now let me understand what makes your ideal trip:
-- **Top interests**: Adventure sports, cultural exploration, food & dining, relaxation, photography?
-- **Weather preference**: Do you prefer warm/tropical, cool/mountainous, or mild weather?
-- **Travel group**: Solo traveler, couple, friends, or family?`
-    }
-
-    if (msg.includes('adventure') || msg.includes('hiking') || msg.includes('trekking') || msg.includes('mountain')) {
-      return `Love the adventurous spirit! 🏔️⛺
-
-Based on what you've shared, I have enough to create an amazing itinerary. Hit **"Generate My Trip Plan"** below!
-
-\`\`\`json
-{
-  "readyToGenerate": true,
-  "preferences": {
-    "budget": ${defaultBudget},
-    "currency": "${cur}",
-    "duration": 7,
-    "interests": ["adventure", "hiking", "nature"],
-    "weather": "cool mountain",
-    "travelStyle": "Adventure",
-    "departureCity": "Your city",
-    "groupType": "solo"
-  },
-  "suggestedDestination": "Hunza Valley, Pakistan"
-}
-\`\`\``
-    }
-
-    if (msg.includes('relax') || msg.includes('beach') || msg.includes('chill') || msg.includes('resort')) {
-      return `A relaxing beach escape sounds perfect! 🌊🌴
-
-Almost ready to build your plan!
-
-\`\`\`json
-{
-  "readyToGenerate": true,
-  "preferences": {
-    "budget": ${Math.round(defaultBudget * 0.85)},
-    "currency": "${cur}",
-    "duration": 7,
-    "interests": ["relaxation", "beach", "snorkeling"],
-    "weather": "tropical warm",
-    "travelStyle": "Relaxation",
-    "departureCity": "Your city",
-    "groupType": "couple"
-  },
-  "suggestedDestination": "Bali, Indonesia"
-}
-\`\`\``
-    }
-
-    if (turnCount >= 3) {
-      const { dest, style, interests } = pickDestination()
-      return `I think I have a great picture of your dream trip now! 🎯
-
-Based on our conversation, I'm ready to create your personalized travel plan with:
-- ✅ Day-by-day itinerary
-- ✅ Restaurant recommendations
-- ✅ Activity suggestions
-- ✅ Cost breakdown in ${cur}
-
-Click **"Generate My Trip Plan"** below to see your complete itinerary!
-
-\`\`\`json
-{
-  "readyToGenerate": true,
-  "preferences": {
-    "budget": ${defaultBudget},
-    "currency": "${cur}",
-    "duration": 7,
-    "interests": ${JSON.stringify(interests)},
-    "weather": "mild",
-    "travelStyle": "${style}",
-    "departureCity": "Your city",
-    "groupType": "solo"
-  },
-  "suggestedDestination": "${dest}"
-}
-\`\`\``
-    }
-
-    // Smart fallback: only ask for what's genuinely missing
-    const missing: string[] = []
-    if (!knownDest) missing.push('📍 **Destination** — where would you like to go?')
-    if (!knownDays) missing.push(`📅 **Duration** — how many days?`)
-    if (!knownBudget) missing.push(`💰 **Budget** — total budget in ${cur}?`)
-
-    if (missing.length === 3) {
-      return `That sounds exciting! 🌍 To create your perfect itinerary, just tell me:\n${missing.map(m => `- ${m}`).join('\n')}`
-    }
-    return `Almost there! 🎯 I just need:\n${missing.map(m => `- ${m}`).join('\n')}`
-  }, [selectedCurrency])
-
-  const callAI = useCallback(async (userMessage: string, history: typeof conversationHistory) => {
-    const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-
-    if (!apiKey) {
-      return generateSmartResponse(userMessage, history.length)
-    }
-
-    const newHistory = [
-      ...history,
-      { role: 'user' as const, content: userMessage }
-    ]
-
-    const dynamicSystemPrompt = `${TRAVEL_SYSTEM_PROMPT}
-
-IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budget currency. Always use ${selectedCurrency} when discussing budget or costs, and always set "currency": "${selectedCurrency}" in the JSON response.`
-
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        system: dynamicSystemPrompt,
-        messages: newHistory,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
-    }
-
-    const data = await response.json() as {
-      content: Array<{ type: string; text: string }>
-    }
-    return data.content[0]?.text || ''
-  }, [selectedCurrency, generateSmartResponse])
 
   const sendMessage = useCallback(async (text?: string) => {
     const messageText = (text ?? input).trim()
@@ -637,47 +170,87 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
       content: messageText,
       timestamp: new Date(),
     }
-
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsTyping(true)
 
-    const newHistory = [...conversationHistory, { role: 'user' as const, content: messageText }]
+    // Extract trip details from user message
+    const newDays = extractDays(messageText)
+    const newBudget = extractBudget(messageText)
+    const newDest = extractDestination(messageText)
+    if (newDays) detectedDaysRef.current = newDays
+    if (newBudget) detectedBudgetRef.current = newBudget
+    if (newDest) detectedDestinationRef.current = newDest
+
+    // Add a streaming placeholder message
+    const streamMsgId = crypto.randomUUID()
+    setMessages(prev => [
+      ...prev,
+      { id: streamMsgId, role: 'assistant', content: '', timestamp: new Date() },
+    ])
+
+    const controller = new AbortController()
 
     try {
-      const aiResponse = await callAI(messageText, conversationHistory)
+      let accumulated = ''
+      let resolvedSessionId = sessionId
 
-      const parsed = parsePreferencesFromResponse(aiResponse)
-      if (parsed.readyToGenerate && parsed.preferences) {
-        setExtractedPreferences(parsed)
+      await streamChat({
+        message: messageText,
+        sessionId: sessionId ?? undefined,
+        userId: 'anonymous',
+        signal: controller.signal,
+        onSessionId: (id) => {
+          resolvedSessionId = id
+          setSessionId(id)
+        },
+        onChunk: (chunk) => {
+          accumulated += chunk
+          setMessages(prev =>
+            prev.map(m => m.id === streamMsgId ? { ...m, content: accumulated } : m)
+          )
+        },
+      })
+
+      // Also scan the full agent reply for any trip details mentioned
+      if (accumulated) {
+        const replyDest = extractDestination(accumulated)
+        const replyDays = extractDays(accumulated)
+        const replyBudget = extractBudget(accumulated)
+        if (replyDest && !detectedDestinationRef.current) detectedDestinationRef.current = replyDest
+        if (replyDays && !detectedDaysRef.current) detectedDaysRef.current = replyDays
+        if (replyBudget && !detectedBudgetRef.current) detectedBudgetRef.current = replyBudget
+      }
+
+      // Keep the resolved session id in sync
+      if (resolvedSessionId && resolvedSessionId !== sessionId) {
+        setSessionId(resolvedSessionId)
+      }
+
+      // Show Generate button when all three preferences are collected
+      const dest = detectedDestinationRef.current
+      const days = detectedDaysRef.current
+      const budget = detectedBudgetRef.current
+      if (dest && days && budget) {
+        setExtractedPreferences({ destination: dest.dest, days, budget })
         setShowGenerateButton(true)
       }
 
-      const cleanResponse = aiResponse.replace(/```json[\s\S]*?```/g, '').trim()
-
-      const aiMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: cleanResponse || "I'm ready to generate your trip plan! Click the button below.",
-        timestamp: new Date(),
-      }
-
-      setMessages(prev => [...prev, aiMessage])
-      setConversationHistory([...newHistory, { role: 'assistant', content: aiResponse }])
-    } catch {
-      const errMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: "I'm having trouble connecting right now. Please check your API key or try again in a moment. 🔄",
-        timestamp: new Date(),
-      }
-      setMessages(prev => [...prev, errMessage])
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === streamMsgId
+            ? { ...m, content: "I'm having trouble connecting to the AI agent. Please check your backend is running and try again. 🔄" }
+            : m
+        )
+      )
     } finally {
       setIsTyping(false)
     }
-  }, [input, isTyping, conversationHistory, callAI])
+  }, [input, isTyping, sessionId])
 
-  // Auto-send query when navigated from Home search bar
+  // Auto-send initial query when navigated from Home search bar
   useEffect(() => {
     const query = (location.state as { initialQuery?: string } | null)?.initialQuery
     if (query?.trim() && !initialQuerySentRef.current) {
@@ -687,50 +260,33 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
   }, [location.state, sendMessage])
 
   const handleGeneratePlan = useCallback(async () => {
-    if (isGenerating) return
+    if (isGenerating || !extractedPreferences) return
     setIsGenerating(true)
 
-    const preferences = extractedPreferences?.preferences || {
-      budget: DEFAULT_BUDGETS[selectedCurrency] ?? 1500,
-      currency: selectedCurrency,
-      duration: 7,
-      interests: ['exploration', 'culture'],
-      weather: 'mild',
-      travelStyle: 'Mixed',
-      departureCity: 'Unknown',
-      groupType: 'solo',
-    }
+    const { destination, days, budget } = extractedPreferences
+    const destInfo = detectedDestinationRef.current
 
-    const loadingMessage: Message = {
+    const loadingMsg: Message = {
       id: crypto.randomUUID(),
       role: 'assistant',
-      content: '🗺️ Crafting your personalised itinerary with real destinations, hotels, and restaurants… This takes about 15–20 seconds!',
+      content: '🗺️ Building your personalised trip plan from real destination data… This takes about 10–15 seconds!',
       timestamp: new Date(),
     }
-    setMessages(prev => [...prev, loadingMessage])
+    setMessages(prev => [...prev, loadingMsg])
 
     try {
-      // Try the real Claude-powered backend first; fall back to mock if unavailable
-      let plan
-      try {
-        plan = await generateTripPlan(preferences, extractedPreferences?.suggestedDestination)
-      } catch {
-        plan = generateMockPlan(preferences, extractedPreferences?.suggestedDestination)
-      }
-
-      setCurrentPreferences(preferences)
-      setCurrentPlan(plan)
-      saveTrip(plan)
-      addSearchHistory({
-        query: extractedPreferences?.suggestedDestination ?? 'Trip',
-        destination: extractedPreferences?.suggestedDestination,
-        budget: preferences.budget,
-        currency: preferences.currency,
-        duration: preferences.duration,
-        interests: preferences.interests,
-        resultPlanId: plan.id,
+      const plan = await buildTripPlanFromAgent({
+        destination,
+        durationDays: days,
+        budget,
+        currency: selectedCurrency,
+        interests: destInfo?.interests ?? ['culture', 'food'],
+        travelStyle: destInfo?.style ?? 'Mixed',
+        groupType: 'solo',
       })
-      navigate('/itinerary')
+
+      setBuiltPlan(plan)
+      setShowPlanPreview(true)
     } catch {
       const errMsg: Message = {
         id: crypto.randomUUID(),
@@ -742,15 +298,37 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
     } finally {
       setIsGenerating(false)
     }
-  }, [isGenerating, extractedPreferences, selectedCurrency, setCurrentPreferences, setCurrentPlan, saveTrip, navigate, addSearchHistory])
+  }, [isGenerating, extractedPreferences, selectedCurrency, setBuiltPlan, setShowPlanPreview])
+
+  const handleConfirmPlan = useCallback(() => {
+    if (!builtPlan || !extractedPreferences) return
+    const conversation = messages
+      .filter(m => m.id !== '0' && m.content.trim() && !m.content.startsWith('🗺️ Building your'))
+      .map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp.toISOString() }))
+
+    setCurrentPreferences(builtPlan.preferences)
+    setCurrentPlan(builtPlan)
+    saveTrip(builtPlan, conversation)
+    addSearchHistory({
+      query: extractedPreferences.destination,
+      destination: extractedPreferences.destination,
+      budget: extractedPreferences.budget,
+      currency: selectedCurrency,
+      duration: extractedPreferences.days,
+      interests: builtPlan.preferences.interests,
+      resultPlanId: builtPlan.id,
+    })
+    navigate('/itinerary')
+  }, [builtPlan, extractedPreferences, messages, selectedCurrency, setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory, navigate])
 
   const resetChat = () => {
+    if (sessionId) void deleteSession(sessionId, 'anonymous')
+    setSessionId(null)
     setMessages([INITIAL_MESSAGE])
     setInput('')
     setIsTyping(false)
     setShowGenerateButton(false)
     setExtractedPreferences(null)
-    setConversationHistory([])
     detectedDestinationRef.current = null
     detectedDaysRef.current = null
     detectedBudgetRef.current = null
@@ -766,8 +344,168 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
   const selectedCurrencyInfo = CURRENCIES.find(c => c.code === selectedCurrency)
   const isInitialState = messages.length === 1
 
+  const formatCost = (amount: number) => {
+    if (selectedCurrency === 'PKR' && amount >= 100000)
+      return `PKR ${(amount / 100000).toFixed(1)} lac`
+    if (amount >= 1000)
+      return `${selectedCurrency} ${amount.toLocaleString()}`
+    return `${selectedCurrency} ${amount}`
+  }
+
+  const breakdownItems = builtPlan ? [
+    { label: 'Flights',       value: builtPlan.costBreakdown.flights,       color: '#e91e8c' },
+    { label: 'Accommodation', value: builtPlan.costBreakdown.accommodation, color: '#9b5de5' },
+    { label: 'Food',          value: builtPlan.costBreakdown.food,          color: '#ffd166' },
+    { label: 'Activities',    value: builtPlan.costBreakdown.activities,    color: '#4cc9f0' },
+    { label: 'Transport',     value: builtPlan.costBreakdown.transport,     color: '#06d6a0' },
+    { label: 'Misc',          value: builtPlan.costBreakdown.miscellaneous, color: '#f06ab3' },
+  ] : []
+  const breakdownTotal = breakdownItems.reduce((s, i) => s + i.value, 0) || 1
+
   return (
     <div className="min-h-screen pt-16 sm:pt-20 pb-8 px-3 sm:px-4 flex flex-col">
+
+      {/* ── Plan Preview Modal ─────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showPlanPreview && builtPlan && (
+          <motion.div
+            key="plan-preview-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
+            onClick={() => setShowPlanPreview(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.93, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 24 }}
+              transition={{ duration: 0.35, ease: 'easeOut' }}
+              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0d0d1a] border border-white/10 shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header gradient */}
+              <div className="relative p-8 bg-gradient-to-br from-[#e91e8c]/20 via-[#9b5de5]/15 to-[#4cc9f0]/10 rounded-t-3xl border-b border-white/8">
+                <button
+                  onClick={() => setShowPlanPreview(false)}
+                  className="absolute top-4 right-4 p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/8 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle size={16} className="text-[#06d6a0]" />
+                  <span className="text-[#06d6a0] text-sm font-semibold">Your plan is ready!</span>
+                </div>
+                <h2 className="font-display text-3xl font-bold text-white mb-1">
+                  {builtPlan.destination}
+                </h2>
+                <p className="text-white/50 text-sm mb-4">{builtPlan.country}</p>
+                <div className="flex flex-wrap gap-3">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
+                    <Clock size={13} className="text-[#e91e8c]" />
+                    {builtPlan.duration} days
+                  </span>
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
+                    <Coins size={13} className="text-[#ffd166]" />
+                    {formatCost(builtPlan.totalCost)}
+                  </span>
+                  {builtPlan.bestTime && (
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
+                      <Calendar size={13} className="text-[#4cc9f0]" />
+                      Best: {builtPlan.bestTime}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Highlights */}
+                {builtPlan.highlights.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Star size={14} className="text-[#ffd166]" />
+                      <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Highlights</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {builtPlan.highlights.slice(0, 8).map(h => (
+                        <span key={h} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/8 text-white/70 text-xs">
+                          {h}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Day-by-day overview */}
+                {builtPlan.itinerary.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Calendar size={14} className="text-[#4cc9f0]" />
+                      <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Itinerary Overview</span>
+                    </div>
+                    <div className="space-y-2">
+                      {builtPlan.itinerary.map(day => (
+                        <div key={day.day} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/3 border border-white/5">
+                          <span className="text-[#e91e8c] text-xs font-bold w-12 flex-shrink-0">Day {day.day}</span>
+                          <span className="text-white/70 text-sm">{day.title}</span>
+                          <span className="ml-auto text-white/30 text-xs flex-shrink-0">{formatCost(day.estimatedCost)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cost breakdown */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp size={14} className="text-[#9b5de5]" />
+                    <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Cost Breakdown</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {breakdownItems.filter(i => i.value > 0).map(item => (
+                      <div key={item.label} className="flex items-center gap-3">
+                        <span className="text-white/50 text-xs w-28 flex-shrink-0">{item.label}</span>
+                        <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${Math.round((item.value / breakdownTotal) * 100)}%`,
+                              backgroundColor: item.color,
+                            }}
+                          />
+                        </div>
+                        <span className="text-white/60 text-xs w-28 text-right flex-shrink-0">{formatCost(item.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conversation saved note */}
+                <p className="text-center text-white/25 text-xs">
+                  💬 Your AI conversation will be saved with this trip
+                </p>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setShowPlanPreview(false)}
+                    className="flex-1 py-3 rounded-2xl glass border border-white/10 text-white/60 text-sm font-semibold hover:text-white hover:bg-white/5 transition-all duration-200"
+                  >
+                    ← Back to Chat
+                  </button>
+                  <button
+                    onClick={handleConfirmPlan}
+                    className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-[#e91e8c] to-[#ffd166] text-white font-bold text-sm hover:shadow-xl hover:shadow-[#e91e8c]/30 hover:scale-[1.02] transition-all duration-200"
+                  >
+                    <Plane size={16} />
+                    View Full Itinerary
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="max-w-4xl mx-auto w-full flex flex-col h-full gap-4 sm:gap-5">
 
         {/* Header */}
@@ -836,9 +574,7 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
                   Describe your dream trip — destination, duration, budget, or travel style
                 </p>
                 <div className="relative group">
-                  {/* Ambient glow */}
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#e91e8c]/20 to-[#4cc9f0]/20 blur-2xl group-focus-within:from-[#e91e8c]/35 group-focus-within:to-[#4cc9f0]/35 transition-all duration-500 pointer-events-none" />
-                  {/* Input pill */}
                   <div className="relative flex items-center glass rounded-full border border-white/10 group-focus-within:border-[#e91e8c]/50 transition-colors duration-300 shadow-2xl shadow-black/40">
                     <Search size={20} className="ml-5 text-[#e91e8c]/70 flex-shrink-0" />
                     <input
@@ -978,11 +714,14 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
                               ? 'bg-[#e91e8c] text-white rounded-tr-sm'
                               : 'glass text-white/85 rounded-tl-sm'
                           }`}>
-                            {msg.content.split('**').map((part, i) =>
-                              i % 2 === 1
-                                ? <strong key={i} className="text-white font-semibold">{part}</strong>
-                                : <span key={i}>{part}</span>
-                            )}
+                            {msg.content
+                              ? msg.content.split('**').map((part, i) =>
+                                  i % 2 === 1
+                                    ? <strong key={i} className="text-white font-semibold">{part}</strong>
+                                    : <span key={i}>{part}</span>
+                                )
+                              : <span className="opacity-40">…</span>
+                            }
                           </div>
                           <span className="text-white/25 text-xs ml-1">
                             {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -993,7 +732,7 @@ IMPORTANT: The user has selected **${selectedCurrency}** as their preferred budg
                   </AnimatePresence>
 
                   <AnimatePresence>
-                    <AITyping active={isTyping} />
+                    <AITyping active={isTyping && messages[messages.length - 1]?.content === ''} />
                   </AnimatePresence>
 
                   <div ref={messagesEndRef} />

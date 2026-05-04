@@ -6,16 +6,20 @@ import {
   Download, Heart, Share2, ArrowLeft, ChevronDown,
   ChevronUp, Sparkles, Calendar, Users, Globe,
   Plane, Hotel, Car, ShoppingBag, Coffee, AlertCircle,
-  CheckCircle, X, LogIn, CloudSun, Wind, Droplets, Eye, Thermometer,
+  CheckCircle, X, LogIn, CloudSun, Droplets,
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import { useAuth } from '@/context/AuthContext'
 import type { DayPlan } from '@/types'
 import {
-  fetchWeather, fetchForecast, fetchHotels,
-  weatherIconUrl, weatherEmoji, getWeatherAdvisory, formatForecastDay,
-  type WeatherData, type ForecastItem, type RealHotel,
+  fetchHotels,
+  weatherEmoji, formatForecastDay,
+  type RealHotel,
 } from '@/services/weatherService'
+import {
+  fetchAgentWeather,
+  type AgentWeatherData,
+} from '@/services/agentService'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -51,8 +55,7 @@ export default function Itinerary() {
   const [saved, setSaved] = useState(false)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather'>('itinerary')
-  const [liveWeather, setLiveWeather] = useState<WeatherData | null>(null)
-  const [forecast, setForecast] = useState<ForecastItem[]>([])
+  const [agentWeather, setAgentWeather] = useState<AgentWeatherData | null>(null)
   const [realHotels, setRealHotels] = useState<RealHotel[]>([])
   const [weatherLoading, setWeatherLoading] = useState(false)
 
@@ -61,12 +64,10 @@ export default function Itinerary() {
     const city = currentPlan.destination
     setWeatherLoading(true)
     Promise.all([
-      fetchWeather(city),
-      fetchForecast(city),
+      fetchAgentWeather(city, 5),
       fetchHotels(city),
-    ]).then(([w, f, h]) => {
-      setLiveWeather(w)
-      setForecast(f)
+    ]).then(([w, h]) => {
+      setAgentWeather(w)
       setRealHotels(h)
       setWeatherLoading(false)
     })
@@ -614,90 +615,64 @@ export default function Itinerary() {
               {weatherLoading ? (
                 <div className="glass rounded-2xl p-10 text-center">
                   <div className="text-4xl mb-3 animate-spin inline-block">🌀</div>
-                  <p className="text-white/50">Fetching live weather data…</p>
+                  <p className="text-white/50">Fetching weather data…</p>
                 </div>
-              ) : liveWeather ? (
+              ) : agentWeather ? (
                 <>
-                  {/* Current conditions card */}
+                  {/* Header with data source badge */}
                   <div className="glass rounded-2xl p-6">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center justify-between mb-5">
                       <div>
-                        <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Live Conditions</div>
-                        <h3 className="font-display text-2xl font-bold text-white">{liveWeather.city}</h3>
-                        <p className="text-white/50 text-sm">{liveWeather.description}</p>
+                        <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Weather Forecast</div>
+                        <h3 className="font-display text-2xl font-bold text-white">{agentWeather.city}</h3>
                       </div>
-                      <img
-                        src={weatherIconUrl(liveWeather.icon)}
-                        alt={liveWeather.description}
-                        className="w-20 h-20 -mt-2"
-                      />
+                      <span className="text-xs px-3 py-1.5 rounded-full glass text-white/50 border border-white/10">
+                        <CloudSun size={11} className="inline mr-1.5 text-[#4cc9f0]" />
+                        {agentWeather.source?.includes('live') || agentWeather.source?.includes('OpenWeather')
+                          ? 'Live data'
+                          : 'Seasonal estimates'}
+                      </span>
                     </div>
-                    <div className="flex items-end gap-3 mb-5">
-                      <span className="font-display text-7xl font-extrabold text-white">{liveWeather.temp}°</span>
-                      <div className="mb-3 text-white/40">
-                        <div className="text-sm">Feels like {liveWeather.feels_like}°C</div>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      {[
-                        { icon: Droplets, label: 'Humidity', value: `${liveWeather.humidity}%`, color: '#4cc9f0' },
-                        { icon: Wind, label: 'Wind', value: `${liveWeather.wind_speed} m/s`, color: '#06d6a0' },
-                        { icon: Eye, label: 'Visibility', value: `${liveWeather.visibility} km`, color: '#ffd166' },
-                      ].map(({ icon: Icon, label, value, color }) => (
-                        <div key={label} className="rounded-xl p-3 text-center" style={{ background: `${color}12` }}>
-                          <Icon size={16} style={{ color }} className="mx-auto mb-1" />
-                          <div className="text-white/40 text-xs mb-0.5">{label}</div>
-                          <div className="text-white font-semibold text-sm">{value}</div>
-                        </div>
+
+                    {/* 5-day forecast grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {agentWeather.forecast.map((day, i) => (
+                        <motion.div
+                          key={day.date}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.07 }}
+                          className="rounded-xl p-4 bg-white/3 hover:bg-white/5 transition-colors"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="text-white/50 text-xs font-medium">{formatForecastDay(day.date)}</div>
+                            <span className="text-xl">{weatherEmoji(day.conditions)}</span>
+                          </div>
+                          <div className="font-display font-bold text-white text-xl mb-1">
+                            {day.temp_min}° – {day.temp_max}°<span className="text-white/30 text-sm font-normal">C</span>
+                          </div>
+                          <div className="text-white/50 text-xs mb-2">{day.conditions}</div>
+                          <div className="flex items-center gap-2 text-white/30 text-xs">
+                            <Droplets size={10} className="text-[#4cc9f0]" />
+                            {day.rain_probability} rain chance
+                          </div>
+                          {day.advisory && day.advisory !== 'Pleasant conditions for travel.' && (
+                            <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-[#ffd166]/10 border border-[#ffd166]/20">
+                              <AlertCircle size={12} className="text-[#ffd166] flex-shrink-0 mt-0.5" />
+                              <p className="text-[#ffd166] text-xs leading-relaxed">{day.advisory}</p>
+                            </div>
+                          )}
+                        </motion.div>
                       ))}
                     </div>
-                    {getWeatherAdvisory(liveWeather.description, liveWeather.temp) && (
-                      <div className="mt-4 flex items-start gap-3 px-4 py-3 rounded-xl bg-[#ffd166]/10 border border-[#ffd166]/20">
-                        <AlertCircle size={16} className="text-[#ffd166] flex-shrink-0 mt-0.5" />
-                        <p className="text-[#ffd166] text-sm">{getWeatherAdvisory(liveWeather.description, liveWeather.temp)}</p>
-                      </div>
-                    )}
                   </div>
 
-                  {/* Forecast */}
-                  {forecast.length > 0 && (
-                    <div className="glass rounded-2xl p-6">
-                      <h3 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
-                        <CloudSun size={13} className="inline mr-2 text-[#4cc9f0]" />
-                        Hourly Forecast
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {forecast.slice(0, 8).map((f, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05 }}
-                            className="rounded-xl p-3 text-center bg-white/3 hover:bg-white/5 transition-colors"
-                          >
-                            <div className="text-white/40 text-xs mb-1">{formatForecastDay(f.time)}</div>
-                            <img
-                              src={weatherIconUrl(f.icon)}
-                              alt={f.description}
-                              className="w-10 h-10 mx-auto"
-                            />
-                            <div className="font-display font-bold text-white text-lg">{f.temp}°</div>
-                            <div className="text-white/40 text-xs mt-0.5 truncate">{f.description}</div>
-                            <div className="flex items-center justify-center gap-1 mt-1 text-white/30 text-xs">
-                              <Droplets size={9} />{f.humidity}%
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Real hotels from OpenTripMap */}
+                  {/* Real hotels */}
                   {realHotels.length > 0 && (
                     <div className="glass rounded-2xl p-6">
                       <h3 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
                         <Hotel size={13} className="inline mr-2 text-[#ffd166]" />
-                        Real Hotels Near {destination} — via OpenTripMap
+                        Hotels Near {destination}
                       </h3>
                       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {realHotels.slice(0, 9).map((h, i) => (
@@ -730,10 +705,10 @@ export default function Itinerary() {
                 </>
               ) : (
                 <div className="glass rounded-2xl p-10 text-center">
-                  <div className="text-4xl mb-3">{weatherEmoji('cloudy')}</div>
+                  <div className="text-4xl mb-3">☁️</div>
                   <h3 className="text-white font-semibold mb-2">Weather data unavailable</h3>
                   <p className="text-white/40 text-sm">
-                    Configure <code className="text-[#e91e8c]">OPENWEATHER_API_KEY</code> in your backend .env to enable live weather.
+                    Make sure the backend is running and <code className="text-[#e91e8c]">OPENWEATHER_API_KEY</code> is configured.
                   </p>
                 </div>
               )}

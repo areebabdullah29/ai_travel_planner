@@ -75,8 +75,15 @@ export interface TripPlan {
   preferences: TripPreferences
 }
 
+export interface ConversationEntry {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+}
+
 export interface SavedTrip extends TripPlan {
   savedAt: string
   status: 'planned' | 'ongoing' | 'completed'
   _backendId?: string  // MongoDB _id from backend, used for sync operations
+  conversation?: ConversationEntry[]
 }
