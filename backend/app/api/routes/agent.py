@@ -187,38 +187,6 @@ async def delete_session(session_id: str, user_id: str = "anonymous"):
 
 # ─── Quick-access data endpoints (no session needed) ────────────────────────────
 
-@router.get("/destinations")
-async def list_destinations():
-    """List all destinations in the database with summary info."""
-    from app.agent.data.destinations import DESTINATIONS
-
-    return {
-        "success": True,
-        "data": {
-            name: {
-                "country": d["country"],
-                "region": d["region"],
-                "interests": d["interests"],
-                "description": d["description"],
-                "highlights": d["highlights"][:3],
-                "min_trip_budget_pkr": d.get("min_trip_budget_pkr", 0),
-            }
-            for name, d in DESTINATIONS.items()
-        },
-    }
-
-
-@router.get("/destinations/{name}")
-async def destination_details(name: str):
-    """Get full details for a specific destination."""
-    from app.agent.tools.destination_tools import get_destination_details
-
-    result = get_destination_details(name)
-    if result["status"] == "error":
-        raise HTTPException(status_code=404, detail=result["message"])
-    return {"success": True, "data": result}
-
-
 @router.get("/weather/{city}")
 async def weather_forecast(city: str, days: int = 5):
     """Get weather forecast for a city (live or seasonal estimate)."""
