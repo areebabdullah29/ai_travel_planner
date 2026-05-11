@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { TripProvider } from '@/context/TripContext'
 import { AuthProvider } from '@/context/AuthContext'
 import Layout from '@/components/layout/Layout'
@@ -28,7 +28,10 @@ export default function App() {
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/plan" element={<TripPlanner />} />
-                    <Route path="/itinerary" element={<Itinerary />} />
+                    {/* Canonical trip detail URL */}
+                    <Route path="/trips/:id" element={<Itinerary />} />
+                    {/* Legacy redirect — keeps old bookmarks working */}
+                    <Route path="/itinerary" element={<Navigate to="/plan" replace />} />
 
                     {/* Dashboard requires login — saved trips are personal */}
                     <Route

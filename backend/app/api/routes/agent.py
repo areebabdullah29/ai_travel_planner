@@ -171,6 +171,20 @@ async def chat_stream(req: ChatRequest):
                     if part.text:
                         chunk = json.dumps({"chunk": part.text, "final": event.is_final_response()})
                         yield f"data: {chunk}\n\n"
+
+        # If the agent called mark_requirements_complete this turn, surface the
+        # gathered prefs to the frontend so it can enable the Generate button.
+        session = await _session_service.get_session(
+            app_name=APP_NAME, user_id=user_id, session_id=session_id
+        )
+        prefs = (session.state or {}).get("requirements") if session else None
+        if prefs:
+            yield f"data: {json.dumps({'requirements_ready': True, 'prefs': prefs})}\n\n"
+            # Clear so subsequent turns don't re-emit the same payload.
+            # InMemorySessionService stores sessions in-process, so direct
+            # state mutation persists for the next /chat call.
+            session.state.pop("requirements", None)
+
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -202,10 +216,12 @@ async def estimate_costs_endpoint(
     travelers: int = 1,
     accommodation_tier: str = "mid_range",
     currency: str = "PKR",
+    origin: str = "",
 ):
     """
     Get a real-time itemised cost estimate for a trip by searching the web.
     Works for any destination worldwide — not limited to a hardcoded list.
+    When `origin` is provided, the flight cost reflects the real route price.
     """
     import asyncio, json, re
     from google import genai
@@ -216,14 +232,22 @@ async def estimate_costs_endpoint(
 
     client = genai.Client()
 
+    flight_clause = (
+        f"round-trip flights from {origin} to {destination}"
+        if origin else
+        f"round-trip flights to {destination}"
+    )
+
     prompt = (
-        f"Search the web for current travel costs to {destination} for {duration_days} days, "
-        f"{travelers} traveler(s), {accommodation_tier} accommodation tier. "
+        f"Search the web for current travel costs for {travelers} traveller(s) — "
+        f"{flight_clause}, {duration_days} nights at {accommodation_tier} accommodation, "
+        f"daily meals, activities, and local transport. "
         f"Return ONLY a JSON object — no markdown fences, no explanation — in this exact shape:\n"
         f'{{"destination":"{destination}","currency":"{currency}","grand_total":0,'
         f'"daily_average_per_person":0,'
         f'"breakdown":{{"flights_round_trip":0,"accommodation":0,"meals":0,"activities":0,"local_transport":0}}}}\n'
-        f"Replace the zeros with real numbers in {currency}."
+        f"Replace the zeros with real numbers in {currency}. "
+        f"flights_round_trip should be the total for ALL {travelers} traveller(s) combined."
     )
 
     try:
@@ -244,3 +268,153 @@ async def estimate_costs_endpoint(
         raise HTTPException(status_code=500, detail=f"Cost search failed: {exc}") from exc
 
     raise HTTPException(status_code=500, detail="Could not parse cost estimate from search results")
+
+
+@router.post("/generate-plan")
+async def generate_plan_endpoint(
+    destination: str,
+    duration_days: int,
+    travelers: int = 1,
+    currency: str = "PKR",
+    origin: str = "",
+    budget: float = 0,
+    interests: str = "",
+    travel_style: str = "Mixed",
+    group_type: str = "solo",
+    travel_month: str = "",
+):
+    """
+    Generate a complete, agent-powered trip plan using Gemini + Google Search.
+    Returns a TripPlan-compatible JSON object — no additional frontend API calls needed.
+    """
+    import asyncio, json, re, uuid
+    from google import genai
+    from google.genai import types as gt
+
+    if not settings.GOOGLE_API_KEY:
+        raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured in .env")
+
+    client = genai.Client()
+
+    flight_info = f"round-trip flights from {origin} to {destination}" if origin else f"round-trip flights to {destination}"
+    budget_note = f"The total budget is {budget} {currency} for all {travelers} traveller(s)." if budget > 0 else ""
+    interests_note = f"Interests: {interests}." if interests else ""
+    month_note = f"They are travelling in {travel_month}." if travel_month else ""
+
+    prompt = f"""Search the web and generate a complete {duration_days}-day travel itinerary for {travelers} traveller(s) going to {destination}.
+{f"They are travelling from {origin}." if origin else ""}
+{budget_note}
+{interests_note}
+{month_note}
+Travel style: {travel_style}.
+
+Search for:
+1. Real {flight_info} prices
+2. Current hotel/accommodation costs in {destination}
+3. Top attractions and must-see sights
+4. Best local restaurants
+5. Daily activity costs and local transport
+
+Return ONLY a JSON object (no markdown, no code fences, just raw JSON) with this exact structure:
+{{
+  "destination": "<city name>",
+  "country": "<country name>",
+  "totalCost": <grand total in {currency} for all {travelers} traveller(s)>,
+  "isOverBudget": <true if totalCost exceeds {budget if budget > 0 else 0}, else false>,
+  "highlights": ["<attraction 1>", "<attraction 2>", "<attraction 3>", "<attraction 4>", "<attraction 5>"],
+  "bestTime": "<best months to visit, e.g. March, April, October>",
+  "restaurants": [
+    {{"name": "<restaurant name>", "cuisine": "<cuisine type>", "priceRange": "<$ or $$ or $$$>", "rating": 4.5, "specialty": "<signature dish>", "location": "<area in city>"}}
+  ],
+  "itinerary": [
+    {{
+      "day": 1,
+      "title": "<day theme, e.g. Arrival & First Impressions>",
+      "activities": [
+        {{"name": "<activity>", "time": "09:00", "duration": "<X hours>", "cost": <cost per person in {currency}>, "description": "<1-2 sentence description>", "category": "Sightseeing"}},
+        {{"name": "<activity>", "time": "14:00", "duration": "<X hours>", "cost": <cost per person in {currency}>, "description": "<1-2 sentence description>", "category": "Culture"}}
+      ],
+      "meals": {{"breakfast": "<place or description>", "lunch": "<place or description>", "dinner": "<restaurant name>"}},
+      "accommodation": "<hotel name or type, e.g. 4-star hotel in city center>",
+      "estimatedCost": <total day cost for all {travelers} traveller(s) in {currency}>
+    }}
+  ],
+  "costBreakdown": {{
+    "flights": <total round-trip flights for all {travelers} traveller(s) in {currency}>,
+    "accommodation": <total hotel cost for all {duration_days} nights in {currency}>,
+    "food": <total meals cost for all {duration_days} days in {currency}>,
+    "activities": <total activities cost in {currency}>,
+    "transport": <total local transport in {currency}>,
+    "miscellaneous": <shopping, tips, extras in {currency}>
+  }},
+  "practicalInfo": {{
+    "language": "<primary language(s)>",
+    "timezone": "<timezone name and UTC offset>",
+    "currency": "<local currency name>",
+    "tipping": "<tipping customs>",
+    "transportation": "<how to get around the city>"
+  }}
+}}
+
+Include exactly {duration_days} day objects in the itinerary array. Use real place names, real restaurant names, and real cost estimates from web search results."""
+
+    try:
+        response = await asyncio.to_thread(
+            client.models.generate_content,
+            model="gemini-3.1-flash-lite-preview",
+            contents=prompt,
+            config=gt.GenerateContentConfig(
+                tools=[gt.Tool(google_search=gt.GoogleSearch())],
+            ),
+        )
+        text = response.text or ""
+        match = re.search(r"\{[\s\S]*\}", text)
+        if not match:
+            raise HTTPException(status_code=500, detail="Agent returned no structured plan data")
+
+        plan_data = json.loads(match.group())
+
+        # Augment with fields the frontend TripPlan type expects
+        plan_data.setdefault("id", str(uuid.uuid4()))
+        plan_data.setdefault("duration", duration_days)
+        plan_data.setdefault("currency", currency)
+        plan_data.setdefault("createdAt", __import__("datetime").datetime.utcnow().isoformat())
+        plan_data["preferences"] = {
+            "budget": budget,
+            "currency": currency,
+            "duration": duration_days,
+            "interests": [i.strip() for i in interests.split(",") if i.strip()] or ["culture", "food"],
+            "weather": "mild",
+            "travelStyle": travel_style,
+            "departureCity": origin or "Your city",
+            "groupType": group_type,
+            "travelers": travelers,
+            "travelMonth": travel_month or "",
+        }
+        # totalCost fallback
+        if not plan_data.get("totalCost"):
+            breakdown = plan_data.get("costBreakdown", {})
+            plan_data["totalCost"] = sum(breakdown.values()) if breakdown else budget or 0
+
+        # Embed weather data so the frontend never needs a separate API call
+        from app.agent.tools.weather_tools import get_weather_forecast, check_weather_for_travel
+        weather_data = await asyncio.to_thread(get_weather_forecast, destination, 5)
+        if travel_month:
+            travel_check = await asyncio.to_thread(check_weather_for_travel, destination, travel_month)
+            plan_data["weather"] = {
+                **weather_data,
+                "travel_month": travel_month,
+                "suitability": travel_check.get("suitability", ""),
+                "travel_advisory": travel_check.get("recommendation", ""),
+            }
+        else:
+            plan_data["weather"] = weather_data
+
+        return {"success": True, "data": plan_data}
+
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not parse plan JSON: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Plan generation failed: {exc}") from exc

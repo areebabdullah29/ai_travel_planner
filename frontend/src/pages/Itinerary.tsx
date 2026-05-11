@@ -1,25 +1,22 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MapPin, Clock, DollarSign, Star, Utensils, Zap,
   Download, Heart, Share2, ArrowLeft, ChevronDown,
   ChevronUp, Sparkles, Calendar, Users, Globe,
   Plane, Hotel, Car, ShoppingBag, Coffee, AlertCircle,
-  CheckCircle, X, LogIn, CloudSun, Droplets,
+  CheckCircle, X, LogIn, CloudSun, Droplets, MessageSquare,
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
 import { useAuth } from '@/context/AuthContext'
-import type { DayPlan } from '@/types'
+import type { DayPlan, TripWeather } from '@/types'
 import {
   fetchHotels,
   weatherEmoji, formatForecastDay,
   type RealHotel,
 } from '@/services/weatherService'
-import {
-  fetchAgentWeather,
-  type AgentWeatherData,
-} from '@/services/agentService'
+import { fetchAgentWeather } from '@/services/agentService'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -48,32 +45,52 @@ const COST_COLORS: Record<string, string> = {
 }
 
 export default function Itinerary() {
-  const { currentPlan, saveTrip } = useTripContext()
+  const { currentPlan, savedTrips, saveTrip } = useTripContext()
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+
+  // Resolve plan: prefer currentPlan when it matches the URL id,
+  // otherwise find the saved trip by id (e.g. navigating from Dashboard)
+  const plan = (currentPlan?.id === id ? currentPlan : null)
+    ?? savedTrips.find(t => t.id === id)
+    ?? null
   const [expandedDay, setExpandedDay] = useState<number | null>(1)
   const [saved, setSaved] = useState(false)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather'>('itinerary')
-  const [agentWeather, setAgentWeather] = useState<AgentWeatherData | null>(null)
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather' | 'conversation'>('itinerary')
+  // Weather is embedded in the plan — only fall back to live API for old plans
+  const [liveWeather, setLiveWeather] = useState<TripWeather | null>(null)
   const [realHotels, setRealHotels] = useState<RealHotel[]>([])
   const [weatherLoading, setWeatherLoading] = useState(false)
+  const [weatherFetched, setWeatherFetched] = useState(false)
 
-  useEffect(() => {
-    if (!currentPlan) return
-    const city = currentPlan.destination
+  const loadWeather = (city: string) => {
+    // If the plan already has embedded weather, just load hotels
+    if (plan?.weather) {
+      if (weatherFetched || weatherLoading) return
+      setWeatherLoading(true)
+      fetchHotels(city).then(h => {
+        setRealHotels(h)
+        setWeatherLoading(false)
+        setWeatherFetched(true)
+      })
+      return
+    }
+    // Legacy plans without embedded weather — fetch live
+    if (weatherFetched || weatherLoading) return
     setWeatherLoading(true)
-    Promise.all([
-      fetchAgentWeather(city, 5),
-      fetchHotels(city),
-    ]).then(([w, h]) => {
-      setAgentWeather(w)
+    Promise.all([fetchAgentWeather(city, 5), fetchHotels(city)]).then(([w, h]) => {
+      if (w) setLiveWeather(w as unknown as TripWeather)
       setRealHotels(h)
       setWeatherLoading(false)
+      setWeatherFetched(true)
     })
-  }, [currentPlan?.destination])
+  }
 
-  if (!currentPlan) {
+  const displayWeather: TripWeather | null = plan?.weather ?? liveWeather
+
+  if (!plan) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 pt-20 gap-6">
         <div className="glass rounded-3xl p-12 text-center max-w-md">
@@ -94,15 +111,18 @@ export default function Itinerary() {
   const {
     destination, country, duration, totalCost, currency,
     highlights, bestTime, itinerary, restaurants,
-    practicalInfo, costBreakdown
-  } = currentPlan
+    practicalInfo, costBreakdown, preferences
+  } = plan
+  const origin = preferences?.departureCity && preferences.departureCity !== 'Your city'
+    ? preferences.departureCity : null
+  const travelers = preferences?.travelers ?? null
 
   const handleSave = () => {
     if (!isAuthenticated) {
       setShowAuthPrompt(true)
       return
     }
-    saveTrip(currentPlan)
+    saveTrip(plan)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
@@ -247,6 +267,12 @@ export default function Itinerary() {
               {destination}
             </h1>
             <div className="flex flex-wrap items-center justify-center gap-5 text-white/60 text-sm">
+              {origin && (
+                <span className="flex items-center gap-2">
+                  <Plane size={15} className="text-[#06d6a0]" />
+                  {origin} → {destination}
+                </span>
+              )}
               <span className="flex items-center gap-2">
                 <Globe size={15} className="text-[#4cc9f0]" />
                 {country}
@@ -255,6 +281,12 @@ export default function Itinerary() {
                 <Calendar size={15} className="text-[#ffd166]" />
                 {duration} days
               </span>
+              {travelers !== null && (
+                <span className="flex items-center gap-2">
+                  <Users size={15} className="text-[#9b5de5]" />
+                  {travelers} traveller{travelers === 1 ? '' : 's'}
+                </span>
+              )}
               <span className="flex items-center gap-2">
                 <span className="text-[#e91e8c] font-semibold text-sm">{currency}</span>
                 {totalCost.toLocaleString()} total
@@ -276,25 +308,7 @@ export default function Itinerary() {
             <ArrowLeft size={16} />
             Back
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                saved
-                  ? 'bg-[#06d6a0] text-white'
-                  : 'glass text-white/70 hover:text-white hover:border-[#e91e8c]/30'
-              }`}
-            >
-              {saved ? <CheckCircle size={16} /> : <Heart size={16} />}
-              {saved ? 'Saved!' : 'Save Trip'}
-            </button>
-            <button className="glass px-4 py-2 rounded-xl text-white/70 hover:text-white text-sm transition-colors flex items-center gap-2">
-              <Share2 size={16} /> Share
-            </button>
-            <button className="glass px-4 py-2 rounded-xl text-white/70 hover:text-white text-sm transition-colors flex items-center gap-2">
-              <Download size={16} /> Export
-            </button>
-          </div>
+
         </div>
       </div>
 
@@ -317,19 +331,43 @@ export default function Itinerary() {
           </div>
         </motion.div>
 
+        {/* Budget overage warning */}
+        {preferences?.budget && preferences.budget > 0 && totalCost > preferences.budget * 1.05 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass rounded-2xl p-4 mb-6 flex items-start gap-3 border border-[#ffd166]/30 bg-[#ffd166]/5"
+          >
+            <AlertCircle size={18} className="text-[#ffd166] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[#ffd166] font-semibold text-sm">Estimated cost exceeds your budget</p>
+              <p className="text-white/50 text-xs mt-0.5">
+                Estimated {currency} {totalCost.toLocaleString()} vs your budget of {currency} {preferences.budget.toLocaleString()}.
+                Consider reducing duration, choosing budget accommodation, or adjusting activities.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Tabs */}
-        <div className="flex gap-1 p-1 glass rounded-2xl mb-8">
-          {(['itinerary', 'restaurants', 'costs', 'info', 'weather'] as const).map(tab => (
+        <div className="flex flex-wrap gap-1 p-1 glass rounded-2xl mb-8">
+          {(['itinerary', 'restaurants', 'costs', 'info', 'weather', 'conversation'] as const).map(tab => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-semibold capitalize transition-all ${
+              onClick={() => {
+                setActiveTab(tab)
+                if (tab === 'weather') loadWeather(destination)
+              }}
+              className={`flex-1 min-w-[80px] py-2.5 rounded-xl text-xs sm:text-sm font-semibold capitalize transition-all ${
                 activeTab === tab
                   ? 'bg-[#e91e8c] text-white shadow-lg'
                   : 'text-white/50 hover:text-white'
               }`}
             >
-              {tab === 'info' ? 'Info' : tab === 'weather' ? '🌤 Weather' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'info' ? 'Info'
+                : tab === 'weather' ? '🌤 Weather'
+                : tab === 'conversation' ? 'Chat'
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </div>
@@ -502,7 +540,7 @@ export default function Itinerary() {
                 <div className="font-display text-5xl font-extrabold gradient-text">
                   {currency} {totalCost.toLocaleString()}
                 </div>
-                <div className="text-white/40 text-sm mt-2">for {duration} days · {currentPlan.preferences.groupType}</div>
+                <div className="text-white/40 text-sm mt-2">for {duration} days · {plan.preferences.groupType}</div>
               </div>
 
               {/* Breakdown Table */}
@@ -615,28 +653,65 @@ export default function Itinerary() {
               {weatherLoading ? (
                 <div className="glass rounded-2xl p-10 text-center">
                   <div className="text-4xl mb-3 animate-spin inline-block">🌀</div>
-                  <p className="text-white/50">Fetching weather data…</p>
+                  <p className="text-white/50">Loading weather data…</p>
                 </div>
-              ) : agentWeather ? (
+              ) : displayWeather ? (
                 <>
+                  {/* Month suitability banner (only when travel month is known) */}
+                  {displayWeather.travel_month && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`glass rounded-2xl p-4 flex items-start gap-3 border ${
+                        displayWeather.suitability === 'excellent'
+                          ? 'border-[#06d6a0]/30 bg-[#06d6a0]/5'
+                          : displayWeather.suitability === 'poor'
+                          ? 'border-[#ffd166]/30 bg-[#ffd166]/5'
+                          : 'border-white/10'
+                      }`}
+                    >
+                      <span className="text-2xl flex-shrink-0">
+                        {displayWeather.suitability === 'excellent' ? '✅'
+                          : displayWeather.suitability === 'poor' ? '⚠️' : '🌤'}
+                      </span>
+                      <div>
+                        <p className={`font-semibold text-sm ${
+                          displayWeather.suitability === 'excellent' ? 'text-[#06d6a0]'
+                            : displayWeather.suitability === 'poor' ? 'text-[#ffd166]'
+                            : 'text-white'
+                        }`}>
+                          {displayWeather.travel_month} in {destination} —{' '}
+                          {displayWeather.suitability === 'excellent' ? 'Excellent time to visit!'
+                            : displayWeather.suitability === 'poor' ? 'Poor season — see advice below'
+                            : 'Fair travel conditions'}
+                        </p>
+                        {displayWeather.travel_advisory && (
+                          <p className="text-white/55 text-xs mt-1 leading-relaxed">
+                            {displayWeather.travel_advisory}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+
                   {/* Header with data source badge */}
                   <div className="glass rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-5">
                       <div>
                         <div className="text-white/40 text-xs uppercase tracking-widest mb-1">Weather Forecast</div>
-                        <h3 className="font-display text-2xl font-bold text-white">{agentWeather.city}</h3>
+                        <h3 className="font-display text-2xl font-bold text-white">{displayWeather.city || destination}</h3>
                       </div>
                       <span className="text-xs px-3 py-1.5 rounded-full glass text-white/50 border border-white/10">
                         <CloudSun size={11} className="inline mr-1.5 text-[#4cc9f0]" />
-                        {agentWeather.source?.includes('live') || agentWeather.source?.includes('OpenWeather')
+                        {displayWeather.source?.includes('live') || displayWeather.source?.includes('OpenWeather')
                           ? 'Live data'
                           : 'Seasonal estimates'}
                       </span>
                     </div>
 
-                    {/* 5-day forecast grid */}
+                    {/* Forecast grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {agentWeather.forecast.map((day, i) => (
+                      {displayWeather.forecast.map((day, i) => (
                         <motion.div
                           key={day.date}
                           initial={{ opacity: 0, y: 10 }}
@@ -648,14 +723,20 @@ export default function Itinerary() {
                             <div className="text-white/50 text-xs font-medium">{formatForecastDay(day.date)}</div>
                             <span className="text-xl">{weatherEmoji(day.conditions)}</span>
                           </div>
-                          <div className="font-display font-bold text-white text-xl mb-1">
-                            {day.temp_min}° – {day.temp_max}°<span className="text-white/30 text-sm font-normal">C</span>
-                          </div>
+                          {day.temp_min !== undefined && day.temp_max !== undefined ? (
+                            <div className="font-display font-bold text-white text-xl mb-1">
+                              {day.temp_min}° – {day.temp_max}°<span className="text-white/30 text-sm font-normal">C</span>
+                            </div>
+                          ) : day.temp_range ? (
+                            <div className="font-display font-bold text-white text-base mb-1">{day.temp_range}</div>
+                          ) : null}
                           <div className="text-white/50 text-xs mb-2">{day.conditions}</div>
-                          <div className="flex items-center gap-2 text-white/30 text-xs">
-                            <Droplets size={10} className="text-[#4cc9f0]" />
-                            {day.rain_probability} rain chance
-                          </div>
+                          {day.rain_probability && (
+                            <div className="flex items-center gap-2 text-white/30 text-xs">
+                              <Droplets size={10} className="text-[#4cc9f0]" />
+                              {day.rain_probability} rain chance
+                            </div>
+                          )}
                           {day.advisory && day.advisory !== 'Pleasant conditions for travel.' && (
                             <div className="mt-3 flex items-start gap-2 px-3 py-2 rounded-lg bg-[#ffd166]/10 border border-[#ffd166]/20">
                               <AlertCircle size={12} className="text-[#ffd166] flex-shrink-0 mt-0.5" />
@@ -667,7 +748,7 @@ export default function Itinerary() {
                     </div>
                   </div>
 
-                  {/* Real hotels */}
+                  {/* Hotels */}
                   {realHotels.length > 0 && (
                     <div className="glass rounded-2xl p-6">
                       <h3 className="text-white/50 text-xs font-semibold uppercase tracking-widest mb-4">
@@ -695,7 +776,7 @@ export default function Itinerary() {
                                     <Star key={j} size={9} className="text-[#ffd166]" fill="#ffd166" />
                                   ))}
                                 </div>
-                              )}
+                          )}
                             </div>
                           </motion.div>
                         ))}
@@ -710,6 +791,68 @@ export default function Itinerary() {
                   <p className="text-white/40 text-sm">
                     Make sure the backend is running and <code className="text-[#e91e8c]">OPENWEATHER_API_KEY</code> is configured.
                   </p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* ── CONVERSATION TAB ── */}
+          {activeTab === 'conversation' && (
+            <motion.div
+              key="conversation"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              className="space-y-4"
+            >
+              {!plan.conversation || plan.conversation.length === 0 ? (
+                <div className="glass rounded-2xl p-12 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-[#e91e8c]/10 flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare size={24} className="text-[#e91e8c]/50" />
+                  </div>
+                  <h3 className="text-white font-semibold mb-2">No conversation recorded</h3>
+                  <p className="text-white/40 text-sm">
+                    The chat transcript is saved when a trip is generated from an AI conversation.
+                  </p>
+                </div>
+              ) : (
+                <div className="glass rounded-2xl p-6">
+                  <div className="flex items-center gap-2 mb-6 pb-4 border-b border-white/8">
+                    <MessageSquare size={16} className="text-[#e91e8c]" />
+                    <span className="text-white font-semibold text-sm">Planning Conversation</span>
+                    <span className="ml-auto text-white/30 text-xs">{plan.conversation.length} messages · read-only</span>
+                  </div>
+                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-1">
+                    {plan.conversation.map((msg, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className={`flex items-start gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                      >
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                          msg.role === 'user'
+                            ? 'bg-[#4cc9f0]/20 text-[#4cc9f0]'
+                            : 'bg-gradient-to-br from-[#e91e8c] to-[#ffd166]'
+                        }`}>
+                          {msg.role === 'user' ? 'U' : <Sparkles size={12} className="text-white" />}
+                        </div>
+                        <div className={`max-w-[78%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
+                          <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                            msg.role === 'user'
+                              ? 'bg-[#4cc9f0]/10 text-white/85 rounded-tr-sm'
+                              : 'glass text-white/80 rounded-tl-sm'
+                          }`}>
+                            {msg.content}
+                          </div>
+                          <span className="text-white/20 text-xs px-1">
+                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               )}
             </motion.div>

@@ -62,6 +62,18 @@ export interface AgentWeatherData {
   forecast: WeatherForecastDay[]
 }
 
+// ── Structured intake payload streamed from the backend agent ────────────
+export interface AgentRequirements {
+  origin: string
+  destination: string
+  duration_days: number
+  travelers: number
+  interests: string[]
+  budget: number
+  currency: string
+  travel_month?: string
+}
+
 // ── PKR conversion rates (for tier selection) ─────────────────────────────
 const TO_PKR: Record<string, number> = {
   PKR: 1, USD: 280, EUR: 305, GBP: 355,
@@ -95,8 +107,9 @@ export async function streamChat(params: {
   signal?: AbortSignal
   onChunk: (text: string) => void
   onSessionId: (id: string) => void
+  onRequirementsReady?: (prefs: AgentRequirements) => void
 }): Promise<void> {
-  const { message, sessionId, userId = 'anonymous', signal, onChunk, onSessionId } = params
+  const { message, sessionId, userId = 'anonymous', signal, onChunk, onSessionId, onRequirementsReady } = params
 
   const res = await fetch(`${AGENT_BASE}/chat/stream`, {
     method: 'POST',
@@ -135,9 +148,13 @@ export async function streamChat(params: {
           session_id?: string
           chunk?: string
           final?: boolean
+          requirements_ready?: boolean
+          prefs?: AgentRequirements
         }
         if (parsed.session_id) {
           onSessionId(parsed.session_id)
+        } else if (parsed.requirements_ready && parsed.prefs) {
+          onRequirementsReady?.(parsed.prefs)
         } else if (parsed.chunk !== undefined) {
           onChunk(parsed.chunk)
         }
@@ -195,16 +212,18 @@ export async function estimateCosts(params: {
   travelers?: number
   accommodationTier?: 'budget' | 'mid_range' | 'luxury'
   currency?: string
+  origin?: string
 }): Promise<CostEstimate | null> {
   try {
-    const { destination, durationDays, travelers = 1, accommodationTier = 'mid_range', currency = 'PKR' } = params
+    const { destination, durationDays, travelers = 1, accommodationTier = 'mid_range', currency = 'PKR', origin = '' } = params
     const url =
       `${AGENT_BASE}/estimate-costs` +
       `?destination=${encodeURIComponent(destination)}` +
       `&duration_days=${durationDays}` +
       `&travelers=${travelers}` +
       `&accommodation_tier=${accommodationTier}` +
-      `&currency=${currency}`
+      `&currency=${currency}` +
+      (origin ? `&origin=${encodeURIComponent(origin)}` : '')
     const res = await fetch(url, { method: 'POST' })
     if (!res.ok) return null
     const json = await res.json() as AgentEnvelope<CostEstimate>
@@ -378,7 +397,49 @@ function buildCostBreakdown(
   }
 }
 
-// ── Main plan builder — replaces generateMockPlan + generateTripPlan ──────
+// ── Agent-powered plan generation (single endpoint, Gemini + Google Search) ──
+
+export async function generatePlan(params: {
+  destination: string
+  durationDays: number
+  budget: number
+  currency: string
+  interests: string[]
+  travelStyle: string
+  groupType: string
+  origin?: string
+  travelers?: number
+  travelMonth?: string
+}): Promise<TripPlan> {
+  const {
+    destination, durationDays, budget, currency, interests,
+    travelStyle, groupType, origin = '', travelers = 1, travelMonth = '',
+  } = params
+
+  const query = new URLSearchParams({
+    destination,
+    duration_days: String(durationDays),
+    travelers: String(travelers),
+    currency,
+    origin,
+    budget: String(budget),
+    interests: interests.join(', '),
+    travel_style: travelStyle,
+    group_type: groupType,
+    travel_month: travelMonth,
+  })
+
+  const res = await fetch(`${AGENT_BASE}/generate-plan?${query.toString()}`, { method: 'POST' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { detail?: string }
+    throw new Error(err.detail ?? `Plan generation failed: ${res.status}`)
+  }
+
+  const json = await res.json() as AgentEnvelope<TripPlan>
+  return json.data
+}
+
+// ── Fallback plan builder (template-based, used if generate-plan fails) ──────
 
 export async function buildTripPlanFromAgent(params: {
   destination: string
@@ -388,13 +449,15 @@ export async function buildTripPlanFromAgent(params: {
   interests: string[]
   travelStyle: string
   groupType: string
+  origin?: string
+  travelers?: number
 }): Promise<TripPlan> {
-  const { destination, durationDays, budget, currency, interests, travelStyle, groupType } = params
+  const { destination, durationDays, budget, currency, interests, travelStyle, groupType, origin = '', travelers = 1 } = params
 
   const tier = selectTier(budget, currency, durationDays)
 
   const [costData, destData] = await Promise.all([
-    estimateCosts({ destination, durationDays, currency, accommodationTier: tier }),
+    estimateCosts({ destination, durationDays, currency, accommodationTier: tier, origin, travelers }),
     fetchDestinationDetails(destination),
   ])
 
@@ -414,9 +477,15 @@ export async function buildTripPlanFromAgent(params: {
     transportation: 'Local taxis, ride-sharing apps, and public transport',
   }
 
+  // Use real grand_total from estimate if available; fall back to budget
+  const realTotal = costData?.grand_total ?? budget
+  const totalCost = realTotal > 0 ? realTotal : budget
+
   const preferences: TripPreferences = {
     budget, currency, duration: durationDays, interests,
-    weather: 'mild', travelStyle, departureCity: 'Your city', groupType,
+    weather: 'mild', travelStyle,
+    departureCity: origin || 'Your city',
+    groupType, travelers,
   }
 
   return {
@@ -424,7 +493,7 @@ export async function buildTripPlanFromAgent(params: {
     destination: destData?.destination ?? destination,
     country,
     duration: durationDays,
-    totalCost: budget,
+    totalCost,
     currency,
     highlights,
     bestTime,

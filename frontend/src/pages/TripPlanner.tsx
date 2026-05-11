@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Send, Sparkles, Plane, RefreshCw, Zap, RotateCcw,
   MapPin, Clock, Users, Thermometer, Heart, Coins, Search,
-  Maximize2, Minimize2, X, Star, Calendar, TrendingUp, CheckCircle
+  Maximize2, Minimize2,
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
-import { streamChat, deleteSession, buildTripPlanFromAgent } from '@/services/agentService'
-import type { Message, TripPlan } from '@/types'
+import { streamChat, deleteSession, generatePlan, type AgentRequirements } from '@/services/agentService'
+import type { Message } from '@/types'
 
 const CURRENCIES = [
   { code: 'PKR', flag: '🇵🇰', name: 'Pakistani Rupee' },
@@ -51,58 +51,6 @@ const QUICK_PROMPTS = [
   { icon: '🍜', text: 'Food & culture tour in SE Asia' },
 ]
 
-// ── Preference extraction helpers ─────────────────────────────────────────
-
-type DestInfo = { dest: string; style: string; interests: string[] }
-
-const DEST_MAP: Array<{ kw: string[]; info: DestInfo }> = [
-  { kw: ['paris', 'france'],                                                              info: { dest: 'Paris',            style: 'Romantic',   interests: ['culture', 'food', 'art'] } },
-  { kw: ['thailand', 'bangkok', 'phuket', 'chiang mai', 'pattaya', 'koh samui', 'krabi'],info: { dest: 'Bangkok',           style: 'Cultural',   interests: ['culture', 'food', 'temples'] } },
-  { kw: ['japan', 'tokyo', 'kyoto', 'osaka', 'hiroshima'],                               info: { dest: 'Tokyo',             style: 'Cultural',   interests: ['culture', 'food', 'technology'] } },
-  { kw: ['singapore', 'sentosa', 'marina bay'],                                          info: { dest: 'Singapore',         style: 'Luxury',     interests: ['food', 'shopping', 'city'] } },
-  { kw: ['london', 'uk', 'england', 'britain'],                                          info: { dest: 'London',            style: 'Cultural',   interests: ['culture', 'history', 'museums'] } },
-  { kw: ['dubai', 'uae', 'emirates', 'abu dhabi'],                                       info: { dest: 'Dubai',             style: 'Luxury',     interests: ['luxury', 'shopping', 'architecture'] } },
-  { kw: ['bali', 'indonesia'],                                                            info: { dest: 'Bali',              style: 'Relaxation', interests: ['beach', 'temples', 'culture'] } },
-  { kw: ['istanbul', 'turkey'],                                                           info: { dest: 'Istanbul',          style: 'Cultural',   interests: ['history', 'culture', 'food'] } },
-  { kw: ['kuala lumpur', 'malaysia'],                                                     info: { dest: 'Kuala Lumpur',      style: 'Mixed',      interests: ['food', 'culture', 'city'] } },
-  { kw: ['barcelona', 'spain'],                                                           info: { dest: 'Barcelona',         style: 'Cultural',   interests: ['culture', 'food', 'architecture'] } },
-  { kw: ['rome', 'italy'],                                                                info: { dest: 'Rome',              style: 'Cultural',   interests: ['history', 'art', 'food'] } },
-  { kw: ['morocco', 'marrakech', 'casablanca'],                                           info: { dest: 'Marrakech',         style: 'Cultural',   interests: ['culture', 'bazaar', 'food'] } },
-  { kw: ['vietnam', 'hanoi', 'ho chi', 'saigon', 'hoi an'],                              info: { dest: 'Hanoi',             style: 'Cultural',   interests: ['culture', 'food', 'history'] } },
-  { kw: ['egypt', 'cairo', 'pyramids'],                                                   info: { dest: 'Cairo',             style: 'Cultural',   interests: ['history', 'pyramids', 'culture'] } },
-  { kw: ['greece', 'athens', 'santorini', 'mykonos'],                                    info: { dest: 'Athens',            style: 'Cultural',   interests: ['history', 'beaches', 'food'] } },
-  { kw: ['pakistan', 'hunza', 'skardu', 'lahore', 'islamabad', 'swat', 'murree'],        info: { dest: 'Lahore',            style: 'Cultural',   interests: ['culture', 'food', 'history'] } },
-  { kw: ['maldives', 'maldive'],                                                          info: { dest: 'Maldives',          style: 'Relaxation', interests: ['beach', 'relaxation', 'snorkeling'] } },
-  { kw: ['africa', 'safari', 'kenya', 'nairobi', 'masai mara', 'serengeti'],             info: { dest: 'Nairobi',           style: 'Adventure',  interests: ['wildlife', 'safari', 'nature'] } },
-  { kw: ['nepal', 'kathmandu', 'everest', 'pokhara'],                                    info: { dest: 'Kathmandu',         style: 'Adventure',  interests: ['trekking', 'mountains', 'culture'] } },
-  { kw: ['new york', 'nyc', 'manhattan', 'usa', 'america', 'united states'],             info: { dest: 'New York',          style: 'Cultural',   interests: ['city', 'culture', 'food'] } },
-  { kw: ['australia', 'sydney', 'melbourne', 'brisbane'],                                info: { dest: 'Sydney',            style: 'Mixed',      interests: ['beaches', 'culture', 'nature'] } },
-]
-
-function extractDays(text: string): number | null {
-  const wk = text.match(/\b(\d+)\s*week/i)
-  if (wk) return +wk[1] * 7
-  const day = text.match(/\b(\d+)\s*(?:day|days|night|nights)\b/i)
-  return day ? +day[1] : null
-}
-
-function extractBudget(text: string): number | null {
-  const clean = text.replace(/,/g, '')
-  const k = clean.match(/\b(\d+(?:\.\d+)?)\s*[kK]\b/)
-  if (k) return Math.round(+k[1] * 1000)
-  const lac = clean.match(/\b(\d+(?:\.\d+)?)\s*(?:lac|lakh|lacs|lakhs)\b/i)
-  if (lac) return Math.round(+lac[1] * 100000)
-  const cur = clean.match(/\b(\d{3,})\s*(?:pkr|usd|gbp|eur|aed|sar|inr|cad|aud|try)\b/i)
-  if (cur) return +cur[1]
-  const word = clean.match(/budget\s*(?:of|is|:)?\s*(\d{3,})/i)
-  return word ? +word[1] : null
-}
-
-function extractDestination(text: string): DestInfo | null {
-  const msg = text.toLowerCase()
-  return DEST_MAP.find(({ kw }) => kw.some(k => msg.includes(k)))?.info ?? null
-}
-
 // ── Typing indicator ──────────────────────────────────────────────────────
 
 interface AITypingProps { active: boolean }
@@ -129,28 +77,31 @@ function AITyping({ active }: AITypingProps) {
   )
 }
 
+type ExtractedPrefs = {
+  origin: string
+  destination: string
+  days: number
+  travelers: number
+  interests: string[]
+  budget: number
+  travelMonth: string
+}
+
 export default function TripPlanner() {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [showGenerateButton, setShowGenerateButton] = useState(false)
-  const [extractedPreferences, setExtractedPreferences] = useState<{
-    destination: string; days: number; budget: number
-  } | null>(null)
+  const [extractedPreferences, setExtractedPreferences] = useState<ExtractedPrefs | null>(null)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [selectedCurrency, setSelectedCurrency] = useState('PKR')
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [showPlanPreview, setShowPlanPreview] = useState(false)
-  const [builtPlan, setBuiltPlan] = useState<TripPlan | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const initialQuerySentRef = useRef(false)
-  const detectedDestinationRef = useRef<DestInfo | null>(null)
-  const detectedDaysRef = useRef<number | null>(null)
-  const detectedBudgetRef = useRef<number | null>(null)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -174,15 +125,6 @@ export default function TripPlanner() {
     setInput('')
     setIsTyping(true)
 
-    // Extract trip details from user message
-    const newDays = extractDays(messageText)
-    const newBudget = extractBudget(messageText)
-    const newDest = extractDestination(messageText)
-    if (newDays) detectedDaysRef.current = newDays
-    if (newBudget) detectedBudgetRef.current = newBudget
-    if (newDest) detectedDestinationRef.current = newDest
-
-    // Add a streaming placeholder message
     const streamMsgId = crypto.randomUUID()
     setMessages(prev => [
       ...prev,
@@ -210,30 +152,23 @@ export default function TripPlanner() {
             prev.map(m => m.id === streamMsgId ? { ...m, content: accumulated } : m)
           )
         },
+        onRequirementsReady: (prefs: AgentRequirements) => {
+          setExtractedPreferences({
+            origin: prefs.origin,
+            destination: prefs.destination,
+            days: prefs.duration_days,
+            travelers: prefs.travelers,
+            interests: prefs.interests ?? [],
+            budget: prefs.budget ?? 0,
+            travelMonth: prefs.travel_month ?? '',
+          })
+          setShowGenerateButton(true)
+          if (prefs.currency) setSelectedCurrency(prefs.currency)
+        },
       })
 
-      // Also scan the full agent reply for any trip details mentioned
-      if (accumulated) {
-        const replyDest = extractDestination(accumulated)
-        const replyDays = extractDays(accumulated)
-        const replyBudget = extractBudget(accumulated)
-        if (replyDest && !detectedDestinationRef.current) detectedDestinationRef.current = replyDest
-        if (replyDays && !detectedDaysRef.current) detectedDaysRef.current = replyDays
-        if (replyBudget && !detectedBudgetRef.current) detectedBudgetRef.current = replyBudget
-      }
-
-      // Keep the resolved session id in sync
       if (resolvedSessionId && resolvedSessionId !== sessionId) {
         setSessionId(resolvedSessionId)
-      }
-
-      // Show Generate button when all three preferences are collected
-      const dest = detectedDestinationRef.current
-      const days = detectedDaysRef.current
-      const budget = detectedBudgetRef.current
-      if (dest && days && budget) {
-        setExtractedPreferences({ destination: dest.dest, days, budget })
-        setShowGenerateButton(true)
       }
 
     } catch (err) {
@@ -263,8 +198,7 @@ export default function TripPlanner() {
     if (isGenerating || !extractedPreferences) return
     setIsGenerating(true)
 
-    const { destination, days, budget } = extractedPreferences
-    const destInfo = detectedDestinationRef.current
+    const { origin, destination, days, travelers, interests, budget, travelMonth } = extractedPreferences
 
     const loadingMsg: Message = {
       id: crypto.randomUUID(),
@@ -274,19 +208,46 @@ export default function TripPlanner() {
     }
     setMessages(prev => [...prev, loadingMsg])
 
-    try {
-      const plan = await buildTripPlanFromAgent({
-        destination,
-        durationDays: days,
-        budget,
-        currency: selectedCurrency,
-        interests: destInfo?.interests ?? ['culture', 'food'],
-        travelStyle: destInfo?.style ?? 'Mixed',
-        groupType: 'solo',
-      })
+    // Auto-derive a sensible budget when the user didn't share one
+    const fallbackPerPerson = DEFAULT_BUDGETS[selectedCurrency] ?? DEFAULT_BUDGETS.PKR
+    const effectiveBudget = budget > 0 ? budget : fallbackPerPerson * travelers
 
-      setBuiltPlan(plan)
-      setShowPlanPreview(true)
+    const planParams = {
+      destination,
+      durationDays: days,
+      budget: effectiveBudget,
+      currency: selectedCurrency,
+      interests: interests.length > 0 ? interests : ['culture', 'food'],
+      travelStyle: 'Mixed',
+      groupType: travelers > 1 ? 'group' : 'solo',
+      origin,
+      travelers,
+      travelMonth,
+    }
+
+    try {
+      const plan = await generatePlan(planParams)
+
+      // Auto-save: persist trip + chat transcript, then jump to trip detail
+      const conversation = [...messages, loadingMsg]
+        .filter(m => m.id !== '0' && m.content.trim() && !m.content.startsWith('🗺️ Building your'))
+        .map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp.toISOString() }))
+
+      const planWithConvo = conversation.length ? { ...plan, conversation } : plan
+
+      setCurrentPreferences(plan.preferences)
+      setCurrentPlan(planWithConvo)
+      saveTrip(plan, conversation)
+      addSearchHistory({
+        query: destination,
+        destination,
+        budget: effectiveBudget,
+        currency: selectedCurrency,
+        duration: days,
+        interests: plan.preferences.interests,
+        resultPlanId: plan.id,
+      })
+      navigate(`/trips/${plan.id}`)
     } catch {
       const errMsg: Message = {
         id: crypto.randomUUID(),
@@ -298,28 +259,7 @@ export default function TripPlanner() {
     } finally {
       setIsGenerating(false)
     }
-  }, [isGenerating, extractedPreferences, selectedCurrency, setBuiltPlan, setShowPlanPreview])
-
-  const handleConfirmPlan = useCallback(() => {
-    if (!builtPlan || !extractedPreferences) return
-    const conversation = messages
-      .filter(m => m.id !== '0' && m.content.trim() && !m.content.startsWith('🗺️ Building your'))
-      .map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp.toISOString() }))
-
-    setCurrentPreferences(builtPlan.preferences)
-    setCurrentPlan(builtPlan)
-    saveTrip(builtPlan, conversation)
-    addSearchHistory({
-      query: extractedPreferences.destination,
-      destination: extractedPreferences.destination,
-      budget: extractedPreferences.budget,
-      currency: selectedCurrency,
-      duration: extractedPreferences.days,
-      interests: builtPlan.preferences.interests,
-      resultPlanId: builtPlan.id,
-    })
-    navigate('/itinerary')
-  }, [builtPlan, extractedPreferences, messages, selectedCurrency, setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory, navigate])
+  }, [isGenerating, extractedPreferences, selectedCurrency, messages, setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory, navigate])
 
   const resetChat = () => {
     if (sessionId) void deleteSession(sessionId, 'anonymous')
@@ -329,9 +269,6 @@ export default function TripPlanner() {
     setIsTyping(false)
     setShowGenerateButton(false)
     setExtractedPreferences(null)
-    detectedDestinationRef.current = null
-    detectedDaysRef.current = null
-    detectedBudgetRef.current = null
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -344,168 +281,8 @@ export default function TripPlanner() {
   const selectedCurrencyInfo = CURRENCIES.find(c => c.code === selectedCurrency)
   const isInitialState = messages.length === 1
 
-  const formatCost = (amount: number) => {
-    if (selectedCurrency === 'PKR' && amount >= 100000)
-      return `PKR ${(amount / 100000).toFixed(1)} lac`
-    if (amount >= 1000)
-      return `${selectedCurrency} ${amount.toLocaleString()}`
-    return `${selectedCurrency} ${amount}`
-  }
-
-  const breakdownItems = builtPlan ? [
-    { label: 'Flights',       value: builtPlan.costBreakdown.flights,       color: '#e91e8c' },
-    { label: 'Accommodation', value: builtPlan.costBreakdown.accommodation, color: '#9b5de5' },
-    { label: 'Food',          value: builtPlan.costBreakdown.food,          color: '#ffd166' },
-    { label: 'Activities',    value: builtPlan.costBreakdown.activities,    color: '#4cc9f0' },
-    { label: 'Transport',     value: builtPlan.costBreakdown.transport,     color: '#06d6a0' },
-    { label: 'Misc',          value: builtPlan.costBreakdown.miscellaneous, color: '#f06ab3' },
-  ] : []
-  const breakdownTotal = breakdownItems.reduce((s, i) => s + i.value, 0) || 1
-
   return (
     <div className="min-h-screen pt-16 sm:pt-20 pb-8 px-3 sm:px-4 flex flex-col">
-
-      {/* ── Plan Preview Modal ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {showPlanPreview && builtPlan && (
-          <motion.div
-            key="plan-preview-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md"
-            onClick={() => setShowPlanPreview(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.93, y: 24 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: 24 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
-              className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0d0d1a] border border-white/10 shadow-2xl"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header gradient */}
-              <div className="relative p-8 bg-gradient-to-br from-[#e91e8c]/20 via-[#9b5de5]/15 to-[#4cc9f0]/10 rounded-t-3xl border-b border-white/8">
-                <button
-                  onClick={() => setShowPlanPreview(false)}
-                  className="absolute top-4 right-4 p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/8 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-                <div className="flex items-center gap-2 mb-3">
-                  <CheckCircle size={16} className="text-[#06d6a0]" />
-                  <span className="text-[#06d6a0] text-sm font-semibold">Your plan is ready!</span>
-                </div>
-                <h2 className="font-display text-3xl font-bold text-white mb-1">
-                  {builtPlan.destination}
-                </h2>
-                <p className="text-white/50 text-sm mb-4">{builtPlan.country}</p>
-                <div className="flex flex-wrap gap-3">
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
-                    <Clock size={13} className="text-[#e91e8c]" />
-                    {builtPlan.duration} days
-                  </span>
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
-                    <Coins size={13} className="text-[#ffd166]" />
-                    {formatCost(builtPlan.totalCost)}
-                  </span>
-                  {builtPlan.bestTime && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/8 text-white/70 text-sm">
-                      <Calendar size={13} className="text-[#4cc9f0]" />
-                      Best: {builtPlan.bestTime}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Highlights */}
-                {builtPlan.highlights.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Star size={14} className="text-[#ffd166]" />
-                      <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Highlights</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {builtPlan.highlights.slice(0, 8).map(h => (
-                        <span key={h} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/8 text-white/70 text-xs">
-                          {h}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Day-by-day overview */}
-                {builtPlan.itinerary.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Calendar size={14} className="text-[#4cc9f0]" />
-                      <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Itinerary Overview</span>
-                    </div>
-                    <div className="space-y-2">
-                      {builtPlan.itinerary.map(day => (
-                        <div key={day.day} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/3 border border-white/5">
-                          <span className="text-[#e91e8c] text-xs font-bold w-12 flex-shrink-0">Day {day.day}</span>
-                          <span className="text-white/70 text-sm">{day.title}</span>
-                          <span className="ml-auto text-white/30 text-xs flex-shrink-0">{formatCost(day.estimatedCost)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Cost breakdown */}
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp size={14} className="text-[#9b5de5]" />
-                    <span className="text-white/60 text-xs uppercase tracking-widest font-semibold">Cost Breakdown</span>
-                  </div>
-                  <div className="space-y-2.5">
-                    {breakdownItems.filter(i => i.value > 0).map(item => (
-                      <div key={item.label} className="flex items-center gap-3">
-                        <span className="text-white/50 text-xs w-28 flex-shrink-0">{item.label}</span>
-                        <div className="flex-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-700"
-                            style={{
-                              width: `${Math.round((item.value / breakdownTotal) * 100)}%`,
-                              backgroundColor: item.color,
-                            }}
-                          />
-                        </div>
-                        <span className="text-white/60 text-xs w-28 text-right flex-shrink-0">{formatCost(item.value)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Conversation saved note */}
-                <p className="text-center text-white/25 text-xs">
-                  💬 Your AI conversation will be saved with this trip
-                </p>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    onClick={() => setShowPlanPreview(false)}
-                    className="flex-1 py-3 rounded-2xl glass border border-white/10 text-white/60 text-sm font-semibold hover:text-white hover:bg-white/5 transition-all duration-200"
-                  >
-                    ← Back to Chat
-                  </button>
-                  <button
-                    onClick={handleConfirmPlan}
-                    className="flex-[2] flex items-center justify-center gap-2 py-3 rounded-2xl bg-gradient-to-r from-[#e91e8c] to-[#ffd166] text-white font-bold text-sm hover:shadow-xl hover:shadow-[#e91e8c]/30 hover:scale-[1.02] transition-all duration-200"
-                  >
-                    <Plane size={16} />
-                    View Full Itinerary
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
       <div className="max-w-4xl mx-auto w-full flex flex-col h-full gap-4 sm:gap-5">
 
         {/* Header */}

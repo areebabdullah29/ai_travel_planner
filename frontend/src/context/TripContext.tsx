@@ -127,14 +127,8 @@ export function TripProvider({ children }: { children: ReactNode }) {
           }))
           .filter((t): t is SavedTrip => t !== null)
 
-        if (reconstructed.length > 0) {
-          // Backend is source of truth — keep backend trips, append any local-only trips
-          setSavedTrips(prev => {
-            const backendIds = new Set(reconstructed.map(t => t.id))
-            const localOnly = prev.filter(t => !backendIds.has(t.id))
-            return [...reconstructed, ...localOnly]
-          })
-        }
+        // Backend is source of truth — replace state entirely with DB trips
+        setSavedTrips(reconstructed)
       } catch {
         // Backend offline — keep localStorage trips
       } finally {
@@ -170,16 +164,14 @@ export function TripProvider({ children }: { children: ReactNode }) {
 
     // Sync to backend if authenticated
     if (isAuthenticated) {
-      const startDate = (plan.createdAt ?? new Date().toISOString()).split('T')[0]
-      const endMs = new Date(startDate).getTime() + plan.duration * 24 * 60 * 60 * 1000
-      const endDate = new Date(endMs).toISOString().split('T')[0]
+      // Embed conversation in planData so it round-trips through MongoDB
+      const planDataWithConversation = conversation?.length
+        ? { ...plan, conversation }
+        : plan
 
       tripsApi.create({
         budget: plan.totalCost,
-        startDate,
-        endDate,
-        status: 'planned',
-        planData: plan,
+        planData: planDataWithConversation as TripPlan,
       }).then(bt => {
         setSavedTrips(prev =>
           prev.map(t => t.id === plan.id ? { ...t, _backendId: bt.id } : t)

@@ -14,6 +14,8 @@ export interface TripPreferences {
   travelStyle: string
   departureCity: string
   groupType: string
+  travelers?: number
+  travelMonth?: string
 }
 
 export interface Activity {
@@ -44,6 +46,26 @@ export interface Restaurant {
   location: string
 }
 
+export interface TripWeatherDay {
+  date: string
+  temp_min?: number
+  temp_max?: number
+  temp_range?: string
+  conditions: string
+  rain_probability?: string
+  advisory?: string
+}
+
+export interface TripWeather {
+  status: string
+  source: string
+  city: string
+  travel_month?: string
+  suitability?: string
+  travel_advisory?: string
+  forecast: TripWeatherDay[]
+}
+
 export interface TripPlan {
   id: string
   destination: string
@@ -70,9 +92,11 @@ export interface TripPlan {
     transport: number
     miscellaneous: number
   }
+  weather?: TripWeather
   coverImage?: string
   createdAt: string
   preferences: TripPreferences
+  conversation?: ConversationEntry[]
 }
 
 export interface ConversationEntry {

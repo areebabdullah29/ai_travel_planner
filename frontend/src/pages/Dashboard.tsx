@@ -59,7 +59,7 @@ function timeAgo(iso: string): string {
 type DashTab = 'trips' | 'history'
 
 export default function Dashboard() {
-  const { savedTrips, deleteTrip, updateTripStatus, setCurrentPlan, searchHistory, clearSearchHistory, isSyncing } = useTripContext()
+  const { savedTrips, deleteTrip, updateTripStatus, searchHistory, clearSearchHistory, isSyncing } = useTripContext()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<SavedTrip['status'] | 'all'>('all')
@@ -274,7 +274,7 @@ export default function Dashboard() {
                               )}
                             </div>
                             <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3">
-                              <Link to="/itinerary" onClick={() => setCurrentPlan(trip)}
+                              <Link to={`/trips/${trip.id}`}
                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#e91e8c] text-white text-xs font-semibold">
                                 <Eye size={13} /> View Plan
                               </Link>
@@ -308,7 +308,7 @@ export default function Dashboard() {
                             </div>
                             <div className="flex items-center justify-between text-white/30 text-xs border-t border-white/5 pt-3">
                               <span className="flex items-center gap-1.5"><Calendar size={10} />{savedDate}</span>
-                              <Link to="/itinerary" onClick={() => setCurrentPlan(trip)}
+                              <Link to={`/trips/${trip.id}`}
                                 className="text-[#e91e8c] hover:text-[#f06ab3] transition-colors flex items-center gap-1">
                                 View <Plane size={10} />
                               </Link>
@@ -449,8 +449,7 @@ export default function Dashboard() {
                           <RefreshCw size={14} />
                         </Link>
                         {entry.resultPlanId && savedTrips.find(t => t.id === entry.resultPlanId) && (
-                          <Link to="/itinerary"
-                            onClick={() => { const trip = savedTrips.find(t => t.id === entry.resultPlanId); if (trip) setCurrentPlan(trip) }}
+                          <Link to={`/trips/${entry.resultPlanId}`}
                             title="View plan" className="p-2 rounded-lg glass text-white/50 hover:text-[#4cc9f0] transition-colors">
                             <ChevronRight size={14} />
                           </Link>
