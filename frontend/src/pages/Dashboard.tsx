@@ -97,10 +97,23 @@ export default function Dashboard() {
     return 'Good evening'
   })()
 
-  const dashSubtitle = (() => {
-    if (savedTrips.length === 0) return 'Ready to plan your first adventure? ✈️'
-    const last = savedTrips[0]
-    return `Last planned: ${last.destination} · ${last.duration} days`
+  const personalizedMessage = (() => {
+    const ongoingTrip = savedTrips.find(t => t.status === 'ongoing')
+    if (ongoingTrip) return `Your trip to ${ongoingTrip.destination} is underway! 🌍`
+
+    const plannedTrips = savedTrips.filter(t => t.status === 'planned')
+    if (plannedTrips.length === 1) return `Your ${plannedTrips[0].destination} adventure awaits! ✈️`
+    if (plannedTrips.length > 1) return `You have ${plannedTrips.length} trips coming up. Exciting! 🗺️`
+
+    const completed = savedTrips.filter(t => t.status === 'completed')
+    if (completed.length > 0) return `Ready for your next adventure? 🌏`
+
+    if (searchHistory.length > 0) {
+      const recent = searchHistory[0].destination
+      if (recent) return `Still dreaming of ${recent}? Let's make it happen! ✨`
+    }
+
+    return "Ready to plan your first adventure? ✈️"
   })()
 
   const topDestination = (() => {
@@ -132,11 +145,11 @@ export default function Dashboard() {
               {user ? getInitials(user.name) : 'U'}
             </div>
             <div>
-              <p className="text-white/40 text-sm">{timeGreeting},</p>
+              <p className="text-white/40 text-sm">{timeGreeting} 👋</p>
               <h1 className="font-display text-3xl md:text-4xl font-extrabold text-white">
-                {user?.name.split(' ')[0] ?? 'Traveler'}<span className="text-[#e91e8c]">!</span>
+                Welcome back, {user?.name.split(' ')[0] ?? 'Traveler'}<span className="text-[#e91e8c]">!</span>
               </h1>
-              <p className="text-white/30 text-xs mt-1">{dashSubtitle}</p>
+              <p className="text-white/50 text-sm mt-1">{personalizedMessage}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

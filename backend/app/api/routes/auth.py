@@ -15,6 +15,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
     RefreshTokenRequest,
+    ProfileUpdateRequest,
 )
 from app.api.dependencies import get_current_user
 
@@ -100,3 +101,43 @@ async def get_profile(
 ):
     """Get current user profile"""
     return UserResponse(**UserModel.serialize(current_user))
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    data: ProfileUpdateRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Update current user profile"""
+    if data.newPassword:
+        if not data.currentPassword:
+            raise HTTPException(status_code=422, detail="Current password is required to change password")
+        if not UserModel.verify_password(current_user["password"], data.currentPassword):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        if data.confirmPassword and data.newPassword != data.confirmPassword:
+            raise HTTPException(status_code=422, detail="New passwords do not match")
+
+    update: dict = {}
+    if data.name is not None:
+        update["name"] = data.name.strip()
+    if data.email is not None:
+        update["email"] = str(data.email)
+    if data.newPassword:
+        update["new_password"] = data.newPassword
+    if data.preferences is not None:
+        existing_prefs = current_user.get("preferences", {})
+        new_prefs = {**existing_prefs, **data.preferences.model_dump(exclude_none=True)}
+        update["preferences"] = new_prefs
+
+    if not update:
+        return UserResponse(**UserModel.serialize(current_user))
+
+    try:
+        updated = await UserModel.update_profile(db, str(current_user["_id"]), update)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return UserResponse(**updated)

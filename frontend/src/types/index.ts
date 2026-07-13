@@ -1,3 +1,52 @@
+export interface DestinationActivity {
+  name: string
+  time: string
+  duration: string
+  costPKR: number
+  category: string
+  description: string
+  slot: 'morning' | 'afternoon' | 'evening'
+}
+
+export interface DestinationHotel {
+  name: string
+  stars: number
+  pricePerNightPKR: number
+  description: string
+}
+
+export interface DestinationRestaurant {
+  name: string
+  cuisine: string
+  priceRange: string
+  rating: number
+  specialty: string
+  location: string
+}
+
+export interface Destination {
+  id: string
+  name: string
+  country: string
+  aliases: string[]
+  type: string
+  region: string
+  baseCostPKR: number
+  weather: string
+  best_season: string
+  language: string
+  timezone: string
+  tipping: string
+  transportation: string
+  safety_rating: number
+  user_rating: number
+  highlights: string[]
+  dayTitles: string[]
+  activities: DestinationActivity[]
+  hotels: DestinationHotel[]
+  restaurants: DestinationRestaurant[]
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant'

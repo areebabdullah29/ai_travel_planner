@@ -1,10 +1,17 @@
 import os
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.database import connect_db, close_db
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 # Must set GOOGLE_API_KEY in os.environ BEFORE importing any google-adk/google-genai
 # modules, because the ADK client reads it at initialization time.

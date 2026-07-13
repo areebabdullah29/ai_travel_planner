@@ -94,8 +94,16 @@ class UserModel:
 
         if "name" in data:
             update_data["name"] = data["name"]
+        if "email" in data:
+            existing = await UserModel.find_by_email(db, data["email"])
+            if existing and str(existing["_id"]) != user_id:
+                raise ValueError("Email already in use")
+            update_data["email"] = data["email"].lower()
         if "preferences" in data:
             update_data["preferences"] = data["preferences"]
+        if "new_password" in data:
+            hashed = bcrypt.hashpw(data["new_password"].encode("utf-8"), bcrypt.gensalt())
+            update_data["password"] = hashed
 
         result = await UserModel._get_collection(db).find_one_and_update(
             {"_id": ObjectId(user_id)},

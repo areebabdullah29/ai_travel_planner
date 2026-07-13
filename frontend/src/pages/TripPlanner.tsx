@@ -7,6 +7,7 @@ import {
   Maximize2, Minimize2,
 } from 'lucide-react'
 import { useTripContext } from '@/context/TripContext'
+import { useAuth } from '@/context/AuthContext'
 import { streamChat, deleteSession, generatePlan, type AgentRequirements } from '@/services/agentService'
 import type { Message } from '@/types'
 
@@ -105,7 +106,21 @@ export default function TripPlanner() {
 
   const navigate = useNavigate()
   const location = useLocation()
-  const { setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory } = useTripContext()
+  const { setCurrentPreferences, setCurrentPlan, saveTrip, addSearchHistory, savedTrips, searchHistory } = useTripContext()
+  const { user, isAuthenticated } = useAuth()
+
+  const plannerGreeting = (() => {
+    if (!isAuthenticated || !user) return null
+    const firstName = user.name.split(' ')[0]
+    const ongoingTrip = savedTrips.find(t => t.status === 'ongoing')
+    if (ongoingTrip) return `Welcome back, ${firstName}! Still exploring ${ongoingTrip.destination}? 🌍`
+    if (savedTrips.length > 0) return `Welcome back, ${firstName}! Ready for your next adventure? ✈️`
+    if (searchHistory.length > 0) {
+      const recent = searchHistory[0].destination
+      if (recent) return `Welcome back, ${firstName}! Still dreaming of ${recent}? ✨`
+    }
+    return `Welcome, ${firstName}! Let's plan your first adventure! 🌏`
+  })()
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -301,6 +316,16 @@ export default function TripPlanner() {
           <p className="text-white/50 text-sm sm:text-base">
             Chat with our AI to create a personalized travel itinerary
           </p>
+          {plannerGreeting && (
+            <motion.p
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#e91e8c]/10 border border-[#e91e8c]/20 text-[#f06ab3] text-sm font-medium"
+            >
+              {plannerGreeting}
+            </motion.p>
+          )}
         </motion.div>
 
         <AnimatePresence mode="wait">

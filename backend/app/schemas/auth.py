@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 class UserBase(BaseModel):
@@ -18,6 +18,22 @@ class UserUpdate(BaseModel):
     """User update schema"""
     name: Optional[str] = None
     preferences: Optional[Dict[str, Any]] = None
+
+
+class PreferencesUpdate(BaseModel):
+    budgetRange: Optional[Dict[str, int]] = None
+    travelStyles: Optional[List[str]] = None
+    preferredRegions: Optional[List[str]] = None
+    tripDuration: Optional[int] = Field(None, ge=1, le=90)
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    email: Optional[EmailStr] = None
+    currentPassword: Optional[str] = None
+    newPassword: Optional[str] = Field(None, min_length=6)
+    confirmPassword: Optional[str] = None
+    preferences: Optional[PreferencesUpdate] = None
 
 
 class UserResponse(UserBase):

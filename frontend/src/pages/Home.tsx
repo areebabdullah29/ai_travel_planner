@@ -10,6 +10,8 @@ import {
   fetchWeather, weatherEmoji, weatherIconUrl, getWeatherAdvisory,
   type WeatherData,
 } from '@/services/weatherService'
+import { useAuth } from '@/context/AuthContext'
+import { useTripContext } from '@/context/TripContext'
 
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
@@ -102,6 +104,21 @@ export default function Home() {
   const navigate = useNavigate()
   const [weatherData, setWeatherData] = useState<Record<string, WeatherData>>({})
   const [weatherLoading, setWeatherLoading] = useState(true)
+  const { user, isAuthenticated } = useAuth()
+  const { savedTrips, searchHistory } = useTripContext()
+
+  const heroGreeting = (() => {
+    if (!isAuthenticated || !user) return null
+    const firstName = user.name.split(' ')[0]
+    const ongoingTrip = savedTrips.find(t => t.status === 'ongoing')
+    if (ongoingTrip) return `Welcome back, ${firstName}! Currently exploring ${ongoingTrip.destination} 🌍`
+    if (savedTrips.length > 0) return `Welcome back, ${firstName}! Ready for your next adventure? ✈️`
+    if (searchHistory.length > 0) {
+      const recent = searchHistory[0].destination
+      if (recent) return `Welcome back, ${firstName}! Still dreaming of ${recent}? ✨`
+    }
+    return `Welcome, ${firstName}! Let's plan your first adventure! 🌏`
+  })()
 
   const handleSearch = (query?: string) => {
     const q = (query ?? searchQuery).trim()
@@ -173,12 +190,22 @@ export default function Home() {
 
           <motion.p
             custom={2} variants={fadeUp} initial="hidden" animate="visible"
-            className="text-white/60 text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-white/60 text-base sm:text-lg md:text-xl max-w-2xl mx-auto leading-relaxed"
           >
             Tell our AI your budget, interests, and dream destinations.
             Get a complete, personalized itinerary — restaurants, activities,
             costs — in seconds.
           </motion.p>
+
+          {heroGreeting && (
+            <motion.p
+              custom={2.5} variants={fadeUp} initial="hidden" animate="visible"
+              className="mt-4 mb-10 inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#e91e8c]/10 border border-[#e91e8c]/25 text-[#f06ab3] text-sm font-medium"
+            >
+              {heroGreeting}
+            </motion.p>
+          )}
+          {!heroGreeting && <div className="mb-10" />}
 
           {/* Hero Search Bar */}
           <motion.div

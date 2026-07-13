@@ -4,6 +4,7 @@ import {
   storeTokens,
   clearStoredAuth,
   type ApiUser,
+  type ProfileUpdatePayload,
 } from '@/services/apiService'
 
 export interface User {
@@ -23,6 +24,7 @@ interface AuthContextValue {
   register: (name: string, email: string, password: string, interests?: string[]) => Promise<void>
   logout: () => void
   updatePreferences: (prefs: ApiUser['preferences']) => Promise<void>
+  updateProfile: (payload: ProfileUpdatePayload) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -108,6 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const updateProfile = useCallback(async (payload: ProfileUpdatePayload) => {
+    const updated = await authApi.updateProfile(payload)
+    persistUser(apiUserToUser(updated))
+  }, [])
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -117,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       logout,
       updatePreferences,
+      updateProfile,
     }}>
       {children}
     </AuthContext.Provider>

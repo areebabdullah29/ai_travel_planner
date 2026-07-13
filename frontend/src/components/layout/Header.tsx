@@ -1,19 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, Compass, Map, LayoutDashboard, Plane, LogOut, ChevronDown } from 'lucide-react'
+import { Menu, X, Compass, Map, Navigation2, LayoutDashboard, Plane, LogOut, ChevronDown, User, Globe } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const publicNavLinks = [
   { href: '/', label: 'Home', icon: Compass },
+  { href: '/destinations', label: 'Explore', icon: Globe },
+  { href: '/map', label: 'Map', icon: Navigation2 },
   { href: '/plan', label: 'Plan Trip', icon: Map },
 ]
 
 const authNavLinks = [
   { href: '/', label: 'Home', icon: Compass },
+  { href: '/destinations', label: 'Explore', icon: Globe },
+  { href: '/map', label: 'Map', icon: Navigation2 },
   { href: '/plan', label: 'Plan Trip', icon: Map },
   { href: '/dashboard', label: 'My Trips', icon: LayoutDashboard },
+  { href: '/profile', label: 'My Profile', icon: User },
 ]
 
 export default function Header() {
@@ -138,6 +143,13 @@ export default function Header() {
                     </div>
 
                     <div className="py-1">
+                      <Link
+                        to="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 text-sm transition-colors"
+                      >
+                        <User size={15} /> My Profile
+                      </Link>
                       <Link
                         to="/dashboard"
                         onClick={() => setUserMenuOpen(false)}

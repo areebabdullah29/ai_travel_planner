@@ -11,12 +11,15 @@ Endpoints:
   GET  /api/agent/weather/{city}    — live weather forecast
 """
 
+import logging
 import uuid
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -250,7 +253,10 @@ async def estimate_costs_endpoint(
         f"flights_round_trip should be the total for ALL {travelers} traveller(s) combined."
     )
 
+    logger.info("[estimate-costs] destination=%s duration=%d travelers=%d currency=%s origin=%r",
+                destination, duration_days, travelers, currency, origin)
     try:
+        logger.debug("[estimate-costs] Calling Gemini model=gemini-3.1-flash-lite-preview")
         response = await asyncio.to_thread(
             client.models.generate_content,
             model="gemini-3.1-flash-lite-preview",
@@ -260,11 +266,15 @@ async def estimate_costs_endpoint(
             ),
         )
         text = response.text or ""
+        logger.debug("[estimate-costs] Raw response length=%d text_preview=%r", len(text), text[:300])
         match = re.search(r"\{[\s\S]*\}", text)
         if match:
             data = json.loads(match.group())
+            logger.info("[estimate-costs] Parsed cost data keys=%s", list(data.keys()))
             return {"success": True, "data": data}
+        logger.error("[estimate-costs] No JSON object found in response. Full text:\n%s", text)
     except Exception as exc:
+        logger.exception("[estimate-costs] Exception during Gemini call: %s", exc)
         raise HTTPException(status_code=500, detail=f"Cost search failed: {exc}") from exc
 
     raise HTTPException(status_code=500, detail="Could not parse cost estimate from search results")
@@ -291,9 +301,18 @@ async def generate_plan_endpoint(
     from google import genai
     from google.genai import types as gt
 
+    logger.info(
+        "[generate-plan] destination=%s duration=%d travelers=%d currency=%s origin=%r "
+        "budget=%s interests=%r style=%r group=%r month=%r",
+        destination, duration_days, travelers, currency, origin,
+        budget, interests, travel_style, group_type, travel_month,
+    )
+
     if not settings.GOOGLE_API_KEY:
+        logger.error("[generate-plan] GOOGLE_API_KEY is not set")
         raise HTTPException(status_code=503, detail="GOOGLE_API_KEY not configured in .env")
 
+    logger.debug("[generate-plan] GOOGLE_API_KEY present (len=%d)", len(settings.GOOGLE_API_KEY))
     client = genai.Client()
 
     flight_info = f"round-trip flights from {origin} to {destination}" if origin else f"round-trip flights to {destination}"
@@ -358,7 +377,9 @@ Return ONLY a JSON object (no markdown, no code fences, just raw JSON) with this
 
 Include exactly {duration_days} day objects in the itinerary array. Use real place names, real restaurant names, and real cost estimates from web search results."""
 
+    logger.debug("[generate-plan] Prompt length=%d chars", len(prompt))
     try:
+        logger.info("[generate-plan] Calling Gemini model=gemini-3.1-flash-lite-preview with google_search tool")
         response = await asyncio.to_thread(
             client.models.generate_content,
             model="gemini-3.1-flash-lite-preview",
@@ -368,11 +389,16 @@ Include exactly {duration_days} day objects in the itinerary array. Use real pla
             ),
         )
         text = response.text or ""
+        logger.info("[generate-plan] Gemini responded: length=%d preview=%r", len(text), text[:300])
+
         match = re.search(r"\{[\s\S]*\}", text)
         if not match:
+            logger.error("[generate-plan] No JSON object found in response. Full text:\n%s", text)
             raise HTTPException(status_code=500, detail="Agent returned no structured plan data")
 
+        logger.debug("[generate-plan] JSON match start=%d end=%d", match.start(), match.end())
         plan_data = json.loads(match.group())
+        logger.info("[generate-plan] Parsed plan keys=%s", list(plan_data.keys()))
 
         # Augment with fields the frontend TripPlan type expects
         plan_data.setdefault("id", str(uuid.uuid4()))
@@ -395,10 +421,13 @@ Include exactly {duration_days} day objects in the itinerary array. Use real pla
         if not plan_data.get("totalCost"):
             breakdown = plan_data.get("costBreakdown", {})
             plan_data["totalCost"] = sum(breakdown.values()) if breakdown else budget or 0
+            logger.debug("[generate-plan] totalCost computed from breakdown: %s", plan_data["totalCost"])
 
         # Embed weather data so the frontend never needs a separate API call
+        logger.debug("[generate-plan] Fetching weather for %s", destination)
         from app.agent.tools.weather_tools import get_weather_forecast, check_weather_for_travel
         weather_data = await asyncio.to_thread(get_weather_forecast, destination, 5)
+        logger.debug("[generate-plan] Weather data keys=%s", list(weather_data.keys()) if isinstance(weather_data, dict) else type(weather_data))
         if travel_month:
             travel_check = await asyncio.to_thread(check_weather_for_travel, destination, travel_month)
             plan_data["weather"] = {
@@ -410,11 +439,14 @@ Include exactly {duration_days} day objects in the itinerary array. Use real pla
         else:
             plan_data["weather"] = weather_data
 
+        logger.info("[generate-plan] SUCCESS — returning plan for %s", destination)
         return {"success": True, "data": plan_data}
 
     except HTTPException:
         raise
     except json.JSONDecodeError as exc:
+        logger.exception("[generate-plan] JSON decode failed: %s", exc)
         raise HTTPException(status_code=500, detail=f"Could not parse plan JSON: {exc}") from exc
     except Exception as exc:
+        logger.exception("[generate-plan] Unexpected error: %s", exc)
         raise HTTPException(status_code=500, detail=f"Plan generation failed: {exc}") from exc

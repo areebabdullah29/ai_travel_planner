@@ -7,6 +7,9 @@ import Home from '@/pages/Home'
 import TripPlanner from '@/pages/TripPlanner'
 import Itinerary from '@/pages/Itinerary'
 import Dashboard from '@/pages/Dashboard'
+import Profile from '@/pages/Profile'
+import Destinations from '@/pages/Destinations'
+import MapExplorer from '@/pages/MapExplorer'
 import Login from '@/pages/Login'
 import Register from '@/pages/Register'
 
@@ -42,6 +45,16 @@ export default function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path="/destinations" element={<Destinations />} />
+                    <Route path="/map" element={<MapExplorer />} />
                   </Routes>
                 </Layout>
               }

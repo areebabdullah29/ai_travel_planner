@@ -161,6 +161,22 @@ export const authApi = {
       body: JSON.stringify({ preferences }),
     }, 'Failed to update preferences')
   },
+
+  async updateProfile(payload: ProfileUpdatePayload): Promise<ApiUser> {
+    return requestJson<ApiUser>('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }, 'Failed to update profile')
+  },
+}
+
+export interface ProfileUpdatePayload {
+  name?: string
+  email?: string
+  currentPassword?: string
+  newPassword?: string
+  confirmPassword?: string
+  preferences?: ApiUser['preferences']
 }
 
 export const tripsApi = {

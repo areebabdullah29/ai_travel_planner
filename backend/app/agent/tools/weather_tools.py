@@ -62,38 +62,18 @@ def check_weather_for_travel(city: str, travel_month: str) -> dict:
 
     Returns:
         dict with suitability rating, concerns, and recommendation.
+        The weather_agent uses Google Search for detailed seasonal advice;
+        this tool provides the live/estimated forecast data to accompany it.
     """
-    from app.agent.data.destinations import DESTINATIONS
-
-    dest = next(
-        (d for name, d in DESTINATIONS.items() if name.lower() == city.lower()),
-        None,
-    )
-
-    month_abbr = travel_month[:3].capitalize()
-    suitability = "good"
-    concerns = []
-    recommendation = ""
-
-    if dest:
-        if month_abbr in dest.get("avoid_months", []):
-            suitability = "poor"
-            concerns.append(f"{travel_month} is typically unfavorable for {city} (extreme weather).")
-            recommendation = f"Consider visiting in {', '.join(dest['best_months'][:3])} instead."
-        elif month_abbr in dest.get("best_months", []):
-            suitability = "excellent"
-            recommendation = f"{travel_month} is one of the best times to visit {city}!"
-        else:
-            suitability = "fair"
-            recommendation = f"{travel_month} is acceptable. Peak season: {', '.join(dest['best_months'][:3])}."
-
     return {
         "status": "success",
         "city": city,
         "travel_month": travel_month,
-        "suitability": suitability,
-        "concerns": concerns,
-        "recommendation": recommendation,
+        "suitability": "check_with_search",
+        "recommendation": (
+            f"Use web search to confirm whether {travel_month} is a good time "
+            f"to visit {city} — check typical weather, rainfall, and events."
+        ),
         "current_forecast": get_weather_forecast(city, days=3),
     }
 
