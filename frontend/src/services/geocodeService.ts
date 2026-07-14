@@ -1,5 +1,4 @@
-const CACHE_KEY = 'tb-geocache-v1'
-const NOMINATIM = 'https://nominatim.openstreetmap.org/search'
+const CACHE_KEY = 'tb-geocache-v2'
 
 export interface GeoPoint {
   lat: number
@@ -7,90 +6,76 @@ export interface GeoPoint {
 }
 
 function loadCache(): Record<string, GeoPoint | null> {
-  try {
-    return JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? '{}')
-  } catch {
-    return {}
-  }
+  try { return JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? '{}') } catch { return {} }
+}
+function saveCache(c: Record<string, GeoPoint | null>) {
+  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(c)) } catch {}
 }
 
-function saveCache(cache: Record<string, GeoPoint | null>) {
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache))
-  } catch {
-    // storage full — ignore
-  }
-}
-
-// Haversine distance in km between two points
+// Haversine distance in km
 export function haversineKm(a: GeoPoint, b: GeoPoint): number {
   const R = 6371
   const dLat = ((b.lat - a.lat) * Math.PI) / 180
   const dLng = ((b.lng - a.lng) * Math.PI) / 180
-  const sinLat = Math.sin(dLat / 2)
-  const sinLng = Math.sin(dLng / 2)
-  const chord =
-    sinLat * sinLat +
-    Math.cos((a.lat * Math.PI) / 180) *
-      Math.cos((b.lat * Math.PI) / 180) *
-      sinLng * sinLng
-  return R * 2 * Math.atan2(Math.sqrt(chord), Math.sqrt(1 - chord))
+  const s = Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s))
 }
 
-// Format distance for display
 export function formatDistance(km: number): string {
-  if (km < 1) return `${Math.round(km * 1000)} m`
-  return `${km.toFixed(1)} km`
+  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
 }
 
-// Estimate travel time (driving for >2 km, walking otherwise)
 export function estimateTravelTime(km: number): string {
   if (km < 2) {
-    const mins = Math.round((km / 5) * 60) // walking 5 km/h
-    return mins <= 1 ? '1 min walk' : `${mins} min walk`
+    const m = Math.round((km / 5) * 60)
+    return m <= 1 ? '1 min walk' : `${m} min walk`
   }
-  const mins = Math.round((km / 40) * 60) // driving 40 km/h city
-  if (mins < 60) return `${mins} min drive`
-  return `${Math.floor(mins / 60)}h ${mins % 60}m drive`
+  const m = Math.round((km / 40) * 60)
+  return m < 60 ? `${m} min drive` : `${Math.floor(m / 60)}h ${m % 60}m drive`
 }
 
-let lastReq = 0
-
-async function nominatim(query: string): Promise<GeoPoint | null> {
-  // Respect Nominatim's 1 req/sec policy
-  const gap = 1100 - (Date.now() - lastReq)
-  if (gap > 0) await new Promise(r => setTimeout(r, gap))
-  lastReq = Date.now()
-
+// ── Photon geocoder (Komoot) — free, no key, location-biased ─────────────
+// Photon searches OpenStreetMap data with Elasticsearch — much more accurate
+// than Nominatim for place name searches, especially with a lat/lon bias.
+async function photon(query: string, near?: GeoPoint): Promise<GeoPoint | null> {
   try {
-    const url = `${NOMINATIM}?q=${encodeURIComponent(query)}&format=json&limit=1&accept-language=en`
-    const res = await fetch(url)
-    const data = await res.json() as Array<{ lat: string; lon: string }>
-    if (data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    let url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=1&lang=en`
+    if (near) url += `&lat=${near.lat}&lon=${near.lng}`
+    const res  = await fetch(url)
+    const data = await res.json() as { features?: Array<{ geometry: { coordinates: [number, number] } }> }
+    if (data.features?.[0]) {
+      const [lng, lat] = data.features[0].geometry.coordinates
+      return { lat, lng }
+    }
     return null
   } catch {
     return null
   }
 }
 
-export async function geocode(query: string): Promise<GeoPoint | null> {
+export async function geocode(query: string, near?: GeoPoint): Promise<GeoPoint | null> {
+  const key   = near ? `${query}|${near.lat.toFixed(3)},${near.lng.toFixed(3)}` : query
   const cache = loadCache()
-  if (query in cache) return cache[query]
-  const result = await nominatim(query)
-  cache[query] = result
+  if (key in cache) return cache[key]
+  const result = await photon(query, near)
+  cache[key] = result
   saveCache(cache)
   return result
 }
 
-// Geocode a list sequentially (respects rate limit)
+// Parallel geocoding — Photon has no strict per-second rate limit
 export async function geocodeBatch(
   queries: string[],
-  onProgress?: (done: number, total: number) => void
+  onProgress?: (done: number) => void,
+  near?: GeoPoint,
 ): Promise<(GeoPoint | null)[]> {
-  const results: (GeoPoint | null)[] = []
-  for (let i = 0; i < queries.length; i++) {
-    results.push(await geocode(queries[i]))
-    onProgress?.(i + 1, queries.length)
-  }
-  return results
+  let done = 0
+  return Promise.all(
+    queries.map(async q => {
+      const r = await geocode(q, near)
+      onProgress?.(++done)
+      return r
+    })
+  )
 }

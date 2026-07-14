@@ -187,12 +187,6 @@ export default function Login() {
               Sign in to your<br />
               <span className="gradient-text">adventure</span>
             </h1>
-            <p className="text-white/40 mt-3 text-sm">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-[#e91e8c] hover:text-[#f06ab3] font-semibold transition-colors">
-                Sign up free
-              </Link>
-            </p>
           </div>
 
           {/* Error message */}
@@ -287,36 +281,16 @@ export default function Login() {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="flex items-center gap-4 my-7">
-            <div className="flex-1 h-px bg-white/8" />
-            <span className="text-white/25 text-xs">or continue with</span>
-            <div className="flex-1 h-px bg-white/8" />
-          </div>
-
-          {/* Social buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Google', icon: '🅖' },
-              { label: 'GitHub', icon: '🐙' },
-            ].map(({ label, icon }) => (
-              <button
-                key={label}
-                type="button"
-                className="flex items-center justify-center gap-2.5 py-3 rounded-xl glass text-white/60 text-sm font-medium hover:text-white hover:bg-white/8 transition-all"
-              >
-                <span>{icon}</span> {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sign up link — mobile */}
-          <p className="text-center text-white/30 text-sm mt-8">
-            New to TravelBuddy?{' '}
-            <Link to="/register" className="text-[#e91e8c] font-semibold hover:text-[#f06ab3] transition-colors">
-              Create an account
+          {/* Sign up link */}
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+            <p className="text-white/60 text-sm">New to TravelBuddy?</p>
+            <Link
+              to="/register"
+              className="mt-2 inline-flex items-center justify-center w-full py-2.5 rounded-xl border border-[#e91e8c]/50 text-[#e91e8c] font-semibold text-sm hover:bg-[#e91e8c] hover:text-white transition-all duration-200"
+            >
+              Create an account →
             </Link>
-          </p>
+          </div>
         </motion.div>
       </div>
     </div>

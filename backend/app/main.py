@@ -19,7 +19,7 @@ settings = get_settings()
 if settings.GOOGLE_API_KEY:
     os.environ.setdefault("GOOGLE_API_KEY", settings.GOOGLE_API_KEY)
 
-from app.api.routes import auth, trips, destinations, search, weather, chat, agent  # noqa: E402
+from app.api.routes import auth, trips, destinations, search, weather, chat, agent, flights  # noqa: E402
 
 
 @asynccontextmanager
@@ -58,6 +58,7 @@ app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(weather.router, prefix="/api", tags=["weather"])
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(agent.router, prefix="/api/agent", tags=["agent"])
+app.include_router(flights.router, prefix="/api", tags=["flights"])
 
 
 # Health check endpoint

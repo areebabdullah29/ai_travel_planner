@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     OPENWEATHER_API_KEY: Optional[str] = None
     OPENTRIPMAP_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None  # Gemini key for ADK travel agent
+    RAPIDAPI_KEY: Optional[str] = None  # Sky Scrapper on RapidAPI — real flight data
 
     class Config:
         env_file = ".env"

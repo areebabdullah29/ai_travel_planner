@@ -11,6 +11,7 @@ import {
 import { useTripContext } from '@/context/TripContext'
 import { useAuth } from '@/context/AuthContext'
 import TripMap from '@/components/TripMap'
+import FlightInfo from '@/components/FlightInfo'
 import type { DayPlan, TripWeather } from '@/types'
 import {
   fetchHotels,
@@ -59,7 +60,7 @@ export default function Itinerary() {
   const [expandedDay, setExpandedDay] = useState<number | null>(1)
   const [saved, setSaved] = useState(false)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
-  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather' | 'conversation' | 'map'>('itinerary')
+  const [activeTab, setActiveTab] = useState<'itinerary' | 'restaurants' | 'costs' | 'info' | 'weather' | 'conversation' | 'map' | 'flights'>('itinerary')
   // Weather is embedded in the plan — only fall back to live API for old plans
   const [liveWeather, setLiveWeather] = useState<TripWeather | null>(null)
   const [realHotels, setRealHotels] = useState<RealHotel[]>([])
@@ -352,7 +353,7 @@ export default function Itinerary() {
 
         {/* Tabs */}
         <div className="flex flex-wrap gap-1 p-1 glass rounded-2xl mb-8">
-          {(['itinerary', 'map', 'restaurants', 'costs', 'info', 'weather', 'conversation'] as const).map(tab => (
+          {(['itinerary', 'flights', 'map', 'restaurants', 'costs', 'info', 'weather', 'conversation'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => {
@@ -365,10 +366,11 @@ export default function Itinerary() {
                   : 'text-white/50 hover:text-white'
               }`}
             >
-              {tab === 'info' ? 'Info'
-                : tab === 'weather' ? '🌤 Weather'
+              {tab === 'info'          ? 'Info'
+                : tab === 'weather'      ? '🌤 Weather'
                 : tab === 'conversation' ? 'Chat'
-                : tab === 'map' ? '🗺 Map'
+                : tab === 'map'          ? '🗺 Map'
+                : tab === 'flights'      ? '✈ Flights'
                 : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
@@ -857,6 +859,18 @@ export default function Itinerary() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          )}
+
+          {/* ── FLIGHTS TAB ── */}
+          {activeTab === 'flights' && (
+            <motion.div
+              key="flights"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+            >
+              <FlightInfo plan={plan} />
             </motion.div>
           )}
 
