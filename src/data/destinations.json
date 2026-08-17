@@ -1,0 +1,920 @@
+[
+  {
+    "id": "hunza-valley",
+    "name": "Hunza Valley",
+    "country": "Pakistan",
+    "aliases": ["hunza", "karimabad", "hunza valley"],
+    "type": "Adventure",
+    "region": "Gilgit-Baltistan",
+    "baseCostPKR": 45000,
+    "weather": "Cool in summer, Cold in winter",
+    "best_season": "May – October",
+    "language": "Burushaski, Shina, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not commonly expected, but appreciated",
+    "transportation": "Jeep hire, local vans, walking",
+    "safety_rating": 4.8,
+    "user_rating": 4.9,
+    "highlights": [
+      "Attabad Lake — turquoise glacier lake formed in 2010",
+      "Baltit Fort — 700-year-old royal fortress with panoramic views",
+      "Eagle's Nest viewpoint at 3,200m altitude",
+      "Rakaposhi Base Camp — world's 12th highest peak views"
+    ],
+    "dayTitles": [
+      "Arrival & Karimabad Orientation",
+      "Baltit Fort & Altit Fort Heritage Day",
+      "Attabad Lake Boat Ride",
+      "Eagle's Nest & Duikar Trek",
+      "Rakaposhi Base Camp Hike",
+      "Local Culture & Bazaar Day",
+      "Departure & Scenic Drive"
+    ],
+    "activities": [
+      { "name": "Baltit Fort visit", "time": "09:00", "duration": "3 hours", "costPKR": 500, "category": "Sightseeing", "description": "Explore the 700-year-old royal fortress perched above Karimabad with sweeping valley views", "slot": "morning" },
+      { "name": "Altit Fort exploration", "time": "14:00", "duration": "2 hours", "costPKR": 400, "category": "Sightseeing", "description": "Visit the older sister fort with ancient wooden architecture and heritage museum", "slot": "afternoon" },
+      { "name": "Attabad Lake boat ride", "time": "10:00", "duration": "2 hours", "costPKR": 1500, "category": "Adventure", "description": "Boat across the stunning turquoise lake created by the 2010 landslide — surrounded by snowy peaks", "slot": "morning" },
+      { "name": "Eagle's Nest viewpoint trek", "time": "07:00", "duration": "4 hours", "costPKR": 0, "category": "Adventure", "description": "Hike up to 3,200m for sunrise panoramas over Hunza, Rakaposhi, and the Karakoram", "slot": "morning" },
+      { "name": "Rakaposhi viewpoint drive", "time": "09:00", "duration": "3 hours", "costPKR": 2000, "category": "Adventure", "description": "Jeep ride to the base camp viewpoint of Rakaposhi (7,788m), the world's 12th highest peak", "slot": "morning" },
+      { "name": "Karimabad Bazaar stroll", "time": "16:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Wander the colorful local market selling dried fruits, gemstones, and handcrafted jewelry", "slot": "afternoon" },
+      { "name": "Ganesh Village cultural walk", "time": "10:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Walk through ancient stone villages with traditional Hunzai architecture and apricot orchards", "slot": "morning" },
+      { "name": "Traditional Hunzai dinner experience", "time": "19:00", "duration": "2 hours", "costPKR": 2000, "category": "Food", "description": "Enjoy a traditional Hunzai meal — chapshuro, diram fiti, and fresh apricot juice in a local home", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "Eagle's Nest Hotel", "stars": 4, "pricePerNightPKR": 9000, "description": "Hilltop resort with 360° mountain views" },
+      { "name": "Hunza Serena Inn", "stars": 5, "pricePerNightPKR": 18000, "description": "Premium heritage property in Karimabad" },
+      { "name": "Old Hunza Inn", "stars": 3, "pricePerNightPKR": 5000, "description": "Comfortable guesthouse with valley views" }
+    ],
+    "restaurants": [
+      { "name": "Café de Hunza", "cuisine": "Local Pakistani", "priceRange": "Budget", "rating": 4.7, "specialty": "Chapshuro & Diram fiti", "location": "Karimabad Bazaar" },
+      { "name": "Hunza Serena Restaurant", "cuisine": "Pakistani & Continental", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Hunzai dumplings & mulberry tea", "location": "Serena Hotel" },
+      { "name": "Baltit Heritage Café", "cuisine": "Traditional Hunza", "priceRange": "Budget", "rating": 4.8, "specialty": "Apricot dishes & local bread", "location": "Near Baltit Fort" }
+    ]
+  },
+  {
+    "id": "lahore",
+    "name": "Lahore",
+    "country": "Pakistan",
+    "aliases": ["lahore", "lahore pakistan"],
+    "type": "Cultural",
+    "region": "Punjab",
+    "baseCostPKR": 22000,
+    "weather": "Hot summers, mild winters",
+    "best_season": "October – March",
+    "language": "Punjabi, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "10% at restaurants is appreciated",
+    "transportation": "Rickshaws, Uber, Metro Bus, Careem",
+    "safety_rating": 4.3,
+    "user_rating": 4.7,
+    "highlights": [
+      "Badshahi Mosque — one of the world's largest mosques",
+      "Lahore Fort (Shahi Qila) — UNESCO World Heritage Site",
+      "Food Street Gawalmandi — Pakistan's finest cuisine",
+      "Shalimar Gardens — 17th century Mughal masterpiece"
+    ],
+    "dayTitles": [
+      "Arrival & Old City Orientation",
+      "Mughal Heritage & Fort Tour",
+      "Shalimar Gardens & Royal Trail",
+      "Food Capital Experience",
+      "Markets, Museums & Modern Lahore",
+      "Day Trip to Wagah Border",
+      "Departure & Final Exploration"
+    ],
+    "activities": [
+      { "name": "Badshahi Mosque visit", "time": "08:00", "duration": "2 hours", "costPKR": 0, "category": "Sightseeing", "description": "Visit one of the world's largest mosques — capacity 100,000 worshippers — with stunning Mughal architecture", "slot": "morning" },
+      { "name": "Lahore Fort (Shahi Qila) tour", "time": "10:00", "duration": "3 hours", "costPKR": 500, "category": "Culture", "description": "Explore the UNESCO-listed Lahore Fort — Sheesh Mahal, Diwan-e-Khas, and Naulakha Pavilion", "slot": "morning" },
+      { "name": "Shalimar Gardens tour", "time": "09:00", "duration": "2 hours", "costPKR": 200, "category": "Sightseeing", "description": "Stroll through Emperor Shah Jahan's three-terraced Mughal garden — pools, fountains and marble pavilions", "slot": "morning" },
+      { "name": "Food Street Gawalmandi dinner", "time": "19:00", "duration": "3 hours", "costPKR": 2500, "category": "Food", "description": "Lahore's most famous food street — Paye, Nihari, Siri Paye, and legendary Lassi under fairy lights", "slot": "evening" },
+      { "name": "Wagah Border ceremony", "time": "15:00", "duration": "4 hours", "costPKR": 1000, "category": "Culture", "description": "Watch the dramatic Pakistan-India flag-lowering ceremony — flags at the border at sunset", "slot": "afternoon" },
+      { "name": "Anarkali Bazaar shopping", "time": "14:00", "duration": "3 hours", "costPKR": 0, "category": "Shopping", "description": "Pakistan's oldest and most vibrant bazaar — jewellery, fabrics, antiques, and street food", "slot": "afternoon" },
+      { "name": "Lahore Museum visit", "time": "10:00", "duration": "2 hours", "costPKR": 200, "category": "Culture", "description": "One of South Asia's best museums — Mughal miniature paintings, Gandharan sculptures, and artifacts", "slot": "morning" },
+      { "name": "Walled City walking tour", "time": "07:00", "duration": "3 hours", "costPKR": 1500, "category": "Culture", "description": "Guided walk through Lahore's ancient walled city — 13 gates, Delhi Gate, and centuries-old havelis", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "PC Lahore (Pearl Continental)", "stars": 5, "pricePerNightPKR": 25000, "description": "Lahore's most iconic 5-star hotel since 1981" },
+      { "name": "Avari Hotel Lahore", "stars": 4, "pricePerNightPKR": 15000, "description": "Premium hotel with rooftop pool near Mall Road" },
+      { "name": "Nishat Hotel", "stars": 4, "pricePerNightPKR": 18000, "description": "Modern luxury with business facilities" }
+    ],
+    "restaurants": [
+      { "name": "Café Aylanto", "cuisine": "Continental & Pakistani", "priceRange": "Upscale", "rating": 4.6, "specialty": "Fusion Pakistani cuisine", "location": "Gulberg III" },
+      { "name": "Waheedas", "cuisine": "Traditional Lahori", "priceRange": "Budget", "rating": 4.9, "specialty": "Halwa Puri breakfast & Paye", "location": "Gawalmandi" },
+      { "name": "Andaaz Restaurant", "cuisine": "Pakistani BBQ", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Seekh kebab & Biryani", "location": "MM Alam Road" }
+    ]
+  },
+  {
+    "id": "islamabad",
+    "name": "Islamabad",
+    "country": "Pakistan",
+    "aliases": ["islamabad", "rawalpindi", "pindi"],
+    "type": "Cultural",
+    "region": "Islamabad Capital Territory",
+    "baseCostPKR": 20000,
+    "weather": "Moderate, four seasons",
+    "best_season": "March – May, September – November",
+    "language": "Urdu, English",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "10% at restaurants",
+    "transportation": "Uber, Careem, Metro Bus",
+    "safety_rating": 4.5,
+    "user_rating": 4.4,
+    "highlights": [
+      "Faisal Mosque — world's largest mosque by courtyard area",
+      "Margalla Hills National Park — 17,386-acre urban forest",
+      "Pakistan Monument — iconic rose-petal shaped landmark",
+      "Lok Virsa Museum — national folk heritage collection"
+    ],
+    "dayTitles": [
+      "Arrival & Capital City Tour",
+      "Margalla Hills Morning Trek",
+      "Museums & Cultural Landmarks",
+      "Day Trip to Taxila (UNESCO Heritage)",
+      "Rawal Lake & Daman-e-Koh",
+      "Shopping & Modern Islamabad",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Faisal Mosque visit", "time": "09:00", "duration": "2 hours", "costPKR": 0, "category": "Sightseeing", "description": "Visit one of the world's largest mosques — stunning contemporary design inspired by a Bedouin tent", "slot": "morning" },
+      { "name": "Margalla Hills Trail 3 hike", "time": "07:00", "duration": "3 hours", "costPKR": 0, "category": "Adventure", "description": "Hike the most popular Margalla trail through pine forests with city views at the summit", "slot": "morning" },
+      { "name": "Pakistan Monument & museum", "time": "10:00", "duration": "2 hours", "costPKR": 300, "category": "Culture", "description": "The rose-petal shaped national monument with attached heritage museum documenting Pakistan's history", "slot": "morning" },
+      { "name": "Taxila Archaeological Site", "time": "09:00", "duration": "5 hours", "costPKR": 2000, "category": "Culture", "description": "Day trip to the UNESCO-listed ancient city — Gandharan artifacts, Buddhist stupas dating to 600 BC", "slot": "morning" },
+      { "name": "Lok Virsa Museum", "time": "14:00", "duration": "2 hours", "costPKR": 200, "category": "Culture", "description": "National folk heritage museum — handicrafts, costumes, musical instruments from all provinces", "slot": "afternoon" },
+      { "name": "Daman-e-Koh viewpoint", "time": "16:00", "duration": "2 hours", "costPKR": 0, "category": "Sightseeing", "description": "Hilltop viewpoint overlooking the entire Islamabad city — especially beautiful at dusk", "slot": "afternoon" },
+      { "name": "Centaurus Mall shopping", "time": "15:00", "duration": "3 hours", "costPKR": 0, "category": "Shopping", "description": "Islamabad's most iconic mixed-use skyscraper complex with premium brands and restaurants", "slot": "afternoon" }
+    ],
+    "hotels": [
+      { "name": "Marriott Islamabad", "stars": 5, "pricePerNightPKR": 30000, "description": "Pakistan's flagship luxury hotel with diplomatic quarters" },
+      { "name": "Serena Hotel Islamabad", "stars": 5, "pricePerNightPKR": 28000, "description": "5-star heritage property in the diplomatic enclave" },
+      { "name": "Best Western Plus Islamabad", "stars": 4, "pricePerNightPKR": 12000, "description": "Modern hotel near Blue Area commercial district" }
+    ],
+    "restaurants": [
+      { "name": "Monal Restaurant", "cuisine": "Pakistani & BBQ", "priceRange": "Mid-range", "rating": 4.8, "specialty": "Barbecue with Margalla Hills views", "location": "Margalla Hills" },
+      { "name": "Kohsar Market Cafés", "cuisine": "Continental & Cafés", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Brunch & artisan coffee", "location": "Kohsar Market, F-6" },
+      { "name": "Saidpur Village Restaurant", "cuisine": "Traditional Pakistani", "priceRange": "Mid-range", "rating": 4.7, "specialty": "Village-style Pakistani food", "location": "Saidpur Village" }
+    ]
+  },
+  {
+    "id": "murree",
+    "name": "Murree",
+    "country": "Pakistan",
+    "aliases": ["murree", "nathiagali", "murree hills"],
+    "type": "Family",
+    "region": "Punjab",
+    "baseCostPKR": 18000,
+    "weather": "Cool summers, snowy winters",
+    "best_season": "All Year (snow Dec–Feb, greenery May–Sep)",
+    "language": "Punjabi, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not expected",
+    "transportation": "Local taxis, chairlift, walking",
+    "safety_rating": 4.2,
+    "user_rating": 4.3,
+    "highlights": [
+      "Mall Road — iconic colonial-era promenade lined with shops",
+      "Pindi Point Chairlift — aerial views of the Pir Panjal range",
+      "Patriata (New Murree) — cable car and chair lift system",
+      "Kashmir Point — panoramic views into AJK"
+    ],
+    "dayTitles": [
+      "Arrival & Mall Road Stroll",
+      "Pindi Point & Chairlift Adventure",
+      "Patriata Cable Car Day",
+      "Nathiagali Forest Walk",
+      "Kashmir Point & Sunset Views",
+      "Shopping & Local Cuisine Day",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Mall Road walk & shopping", "time": "10:00", "duration": "3 hours", "costPKR": 0, "category": "Shopping", "description": "Stroll Murree's famous colonial promenade — souvenir shops, street food, and mountain air", "slot": "morning" },
+      { "name": "Pindi Point Chairlift", "time": "11:00", "duration": "2 hours", "costPKR": 800, "category": "Adventure", "description": "Take the chairlift above the pine forests for aerial views of the Pir Panjal range", "slot": "morning" },
+      { "name": "Patriata Cable Car ride", "time": "10:00", "duration": "3 hours", "costPKR": 1200, "category": "Adventure", "description": "Two-stage cable car system rising to 2,600m — best views in Murree hills", "slot": "morning" },
+      { "name": "Nathiagali forest trail", "time": "09:00", "duration": "3 hours", "costPKR": 0, "category": "Adventure", "description": "Walk through thick oak and pine forests to the Nathiagali viewpoint and Mukeshpuri peak", "slot": "morning" },
+      { "name": "Kashmir Point viewpoint", "time": "16:00", "duration": "2 hours", "costPKR": 0, "category": "Sightseeing", "description": "Panoramic views across the Neelum Valley and into Azad Kashmir — best at golden hour", "slot": "afternoon" },
+      { "name": "Local bazaar & evening food", "time": "17:00", "duration": "2 hours", "costPKR": 1500, "category": "Food", "description": "Try Murree's famous corn on the cob, jalebis, and traditional kahwa tea at the local bazaar", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "Hotel One Murree", "stars": 4, "pricePerNightPKR": 12000, "description": "Modern comfort with mountain views" },
+      { "name": "Shangrila Resort Murree", "stars": 3, "pricePerNightPKR": 7000, "description": "Family-friendly resort near Mall Road" },
+      { "name": "Mall Road Guest House", "stars": 2, "pricePerNightPKR": 4000, "description": "Budget accommodation in the heart of Murree" }
+    ],
+    "restaurants": [
+      { "name": "Gloria Jeans Murree", "cuisine": "Café & Continental", "priceRange": "Mid-range", "rating": 4.3, "specialty": "Hot drinks & sandwiches", "location": "Mall Road" },
+      { "name": "Lintott's Restaurant", "cuisine": "Pakistani", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Karahi & Balti dishes", "location": "Cecil Hotel" },
+      { "name": "Desi Dhaba Murree", "cuisine": "Local Pakistani", "priceRange": "Budget", "rating": 4.2, "specialty": "Daal Makhani & Naan", "location": "Bazaar Road" }
+    ]
+  },
+  {
+    "id": "skardu",
+    "name": "Skardu",
+    "country": "Pakistan",
+    "aliases": ["skardu", "shangri-la", "k2 base", "deosai"],
+    "type": "Adventure",
+    "region": "Gilgit-Baltistan",
+    "baseCostPKR": 55000,
+    "weather": "Cold, high altitude",
+    "best_season": "June – September",
+    "language": "Balti, Shina, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not expected",
+    "transportation": "Jeep hire, chartered vehicle",
+    "safety_rating": 4.6,
+    "user_rating": 4.8,
+    "highlights": [
+      "Deosai National Park — world's second highest plateau (4,114m)",
+      "Shangrila Resort (Heaven on Earth) — iconic lakeside resort",
+      "K2 Viewpoint — glimpse of the world's second highest peak",
+      "Satpara Lake — crystal-clear glacial lake at 2,636m"
+    ],
+    "dayTitles": [
+      "Arrival & Skardu City Tour",
+      "Satpara Lake & Kachura Lakes",
+      "Shangrila Resort & Upper Kachura",
+      "Deosai Plateau Safari",
+      "Shigar Valley & Silk Road Fort",
+      "Manthal Rock Buddha & Bazaar",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Satpara Lake visit", "time": "09:00", "duration": "3 hours", "costPKR": 0, "category": "Sightseeing", "description": "Visit the stunning glacial lake 18km from Skardu — crystal blue waters at 2,636m altitude", "slot": "morning" },
+      { "name": "Shangrila Resort tour", "time": "10:00", "duration": "3 hours", "costPKR": 500, "category": "Sightseeing", "description": "Visit the legendary 'Heaven on Earth' resort — airplane café, lake, and pine-fringed gardens", "slot": "morning" },
+      { "name": "Deosai Plains full-day tour", "time": "07:00", "duration": "8 hours", "costPKR": 6000, "category": "Adventure", "description": "Full-day jeep safari across the world's 2nd highest plateau — wildflowers, Himalayan brown bears, eagles", "slot": "morning" },
+      { "name": "Shigar Fort & Valley", "time": "09:00", "duration": "4 hours", "costPKR": 300, "category": "Culture", "description": "Visit the 600-year-old Shigar Fort (now Serena Heritage Hotel) and the ancient Silk Road valley", "slot": "morning" },
+      { "name": "Kachura Lakes boat ride", "time": "11:00", "duration": "2 hours", "costPKR": 1000, "category": "Adventure", "description": "Boat on Lower and Upper Kachura Lakes — surrounded by towering Karakoram peaks", "slot": "morning" },
+      { "name": "Manthal Rock (Buddha of Swat)", "time": "10:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Ancient rock carving of Buddha dating to 8th century AD along the ancient Silk Road route", "slot": "morning" },
+      { "name": "Skardu Fort (Kharpocho) visit", "time": "16:00", "duration": "2 hours", "costPKR": 200, "category": "Sightseeing", "description": "16th century hilltop fort with panoramic views over Skardu city and the Indus River valley", "slot": "afternoon" }
+    ],
+    "hotels": [
+      { "name": "Serena Shigar Fort", "stars": 5, "pricePerNightPKR": 22000, "description": "Restored 17th-century fort hotel — a UNESCO conservation project" },
+      { "name": "Shangrila Resort Skardu", "stars": 4, "pricePerNightPKR": 15000, "description": "Iconic lakeside resort — Pakistan's most photographed hotel" },
+      { "name": "K2 Motel Skardu", "stars": 3, "pricePerNightPKR": 6000, "description": "Clean comfortable base for mountaineers and tourists" }
+    ],
+    "restaurants": [
+      { "name": "Shangrila Restaurant", "cuisine": "Pakistani & Continental", "priceRange": "Mid-range", "rating": 4.6, "specialty": "Balti trout & local bread", "location": "Shangrila Resort" },
+      { "name": "Masherbrum Restaurant", "cuisine": "Local Balti", "priceRange": "Budget", "rating": 4.4, "specialty": "Mamtu dumplings & Skardu soup", "location": "Skardu Bazaar" },
+      { "name": "PC Skardu Restaurant", "cuisine": "Pakistani", "priceRange": "Upscale", "rating": 4.5, "specialty": "Glacier trout & BBQ", "location": "Pearl Continental" }
+    ]
+  },
+  {
+    "id": "swat-valley",
+    "name": "Swat Valley",
+    "country": "Pakistan",
+    "aliases": ["swat", "mingora", "kalam", "malam jabba", "swat valley"],
+    "type": "Cultural",
+    "region": "Khyber Pakhtunkhwa",
+    "baseCostPKR": 30000,
+    "weather": "Moderate summers, snowy winters",
+    "best_season": "April – October",
+    "language": "Pashto, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not expected",
+    "transportation": "Local vans, hired car",
+    "safety_rating": 4.0,
+    "user_rating": 4.5,
+    "highlights": [
+      "Malam Jabba Ski Resort — Pakistan's premier ski resort at 2,804m",
+      "Kalam Valley — lush green meadows and the Ushu Forest",
+      "Fizagat Park — riverside park along the Swat River",
+      "Butkara Stupa — 3rd century BC Buddhist archaeological site"
+    ],
+    "dayTitles": [
+      "Arrival & Mingora Orientation",
+      "Malam Jabba Ski/Adventure Resort",
+      "Kalam Valley & Ushu Forest",
+      "Mahodand Lake Trek",
+      "Buddhist Heritage Trail",
+      "Fizagat Park & River Walk",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Malam Jabba Resort activities", "time": "09:00", "duration": "6 hours", "costPKR": 3000, "category": "Adventure", "description": "Pakistan's only ski resort at 2,804m — chairlift, skiing (winter), hiking and zipline (summer)", "slot": "morning" },
+      { "name": "Kalam Valley drive & walk", "time": "09:00", "duration": "4 hours", "costPKR": 2000, "category": "Sightseeing", "description": "Scenic drive through the lush Kalam Valley — dense pine forests, waterfalls and glacier-fed rivers", "slot": "morning" },
+      { "name": "Mahodand Lake jeep & hike", "time": "08:00", "duration": "6 hours", "costPKR": 3500, "category": "Adventure", "description": "Jeep ride through the Ushu Forest to the stunning high-altitude Mahodand Lake at 2,960m", "slot": "morning" },
+      { "name": "Butkara Stupa archaeological site", "time": "10:00", "duration": "2 hours", "costPKR": 200, "category": "Culture", "description": "3rd century BC Buddhist stupa and monastery ruins — remnants of the ancient Gandhara civilization", "slot": "morning" },
+      { "name": "Fizagat Park riverside walk", "time": "16:00", "duration": "2 hours", "costPKR": 100, "category": "Nature", "description": "Walk along the Swat River through the green Fizagat Park — popular family picnic spot", "slot": "afternoon" },
+      { "name": "Swat Museum visit", "time": "10:00", "duration": "2 hours", "costPKR": 200, "category": "Culture", "description": "Outstanding collection of Gandharan sculpture, coins, and Buddhist artifacts from Swat's 3,000-year history", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "PC Swat (Malam Jabba)", "stars": 5, "pricePerNightPKR": 18000, "description": "Pakistan's premier mountain resort at the ski resort" },
+      { "name": "Rock City Resort Swat", "stars": 4, "pricePerNightPKR": 10000, "description": "Riverside resort with mountain views in Kalam" },
+      { "name": "Swat Continental Hotel", "stars": 3, "pricePerNightPKR": 6000, "description": "Central Mingora hotel with all amenities" }
+    ],
+    "restaurants": [
+      { "name": "Al-Mashriq Restaurant", "cuisine": "Pashtun & Pakistani", "priceRange": "Budget", "rating": 4.5, "specialty": "Chapli Kebab & Tikkah", "location": "Mingora" },
+      { "name": "Rock City Restaurant", "cuisine": "Pakistani & BBQ", "priceRange": "Mid-range", "rating": 4.4, "specialty": "Fresh trout & BBQ", "location": "Kalam" },
+      { "name": "PC Malam Jabba Restaurant", "cuisine": "Continental & Pakistani", "priceRange": "Upscale", "rating": 4.6, "specialty": "Buffet & international cuisine", "location": "Malam Jabba" }
+    ]
+  },
+  {
+    "id": "neelum-valley",
+    "name": "Neelum Valley",
+    "country": "Pakistan",
+    "aliases": ["neelum", "neelum valley", "azad kashmir", "ajk"],
+    "type": "Adventure",
+    "region": "Azad Jammu & Kashmir",
+    "baseCostPKR": 35000,
+    "weather": "Cool summers, heavy snow in winter",
+    "best_season": "May – October",
+    "language": "Kashmiri, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not expected",
+    "transportation": "Hired jeep, local vans",
+    "safety_rating": 4.2,
+    "user_rating": 4.7,
+    "highlights": [
+      "Shounter Lake — sacred alpine lake at 3,600m",
+      "Noori Top — panoramic Himalayan views at 4,000m",
+      "Keran — double-sided village along the LoC river",
+      "Ratti Gali Lake — emerald glacial lake trek"
+    ],
+    "dayTitles": [
+      "Arrival & Muzaffarabad",
+      "Keran & Sharda Valley",
+      "Kel Village & Shounter Base",
+      "Ratti Gali Lake Trek",
+      "Noori Top Hike",
+      "Kundal Shahi & Waterfalls",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Ratti Gali Lake trek", "time": "07:00", "duration": "8 hours", "costPKR": 2000, "category": "Adventure", "description": "Stunning 8km trek to the emerald-green glacial Ratti Gali Lake at 3,700m — one of Pakistan's most beautiful lakes", "slot": "morning" },
+      { "name": "Shounter Lake visit", "time": "09:00", "duration": "5 hours", "costPKR": 2500, "category": "Adventure", "description": "Sacred alpine lake at 3,600m surrounded by glaciers — jeep ride and short hike", "slot": "morning" },
+      { "name": "Keran village & LoC river", "time": "10:00", "duration": "3 hours", "costPKR": 0, "category": "Sightseeing", "description": "Visit the unique Keran village straddling the Line of Control river — families separated by an international boundary", "slot": "morning" },
+      { "name": "Noori Top summit hike", "time": "06:00", "duration": "8 hours", "costPKR": 1500, "category": "Adventure", "description": "Challenging all-day hike to Noori Top at 4,003m — 360° Himalayan panorama across multiple valleys", "slot": "morning" },
+      { "name": "Kundal Shahi waterfalls", "time": "10:00", "duration": "2 hours", "costPKR": 0, "category": "Nature", "description": "Stunning cascading waterfalls amid dense forest — accessible roadside natural attraction", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "PTDC Motel Kel", "stars": 3, "pricePerNightPKR": 5000, "description": "Government rest house in the heart of Neelum Valley" },
+      { "name": "Neelum Valley Resorts", "stars": 3, "pricePerNightPKR": 7000, "description": "Comfortable cottages with riverside views" },
+      { "name": "Sharda Rest House", "stars": 2, "pricePerNightPKR": 3500, "description": "Basic but scenic accommodation near Sharda" }
+    ],
+    "restaurants": [
+      { "name": "Neelum River Camp Café", "cuisine": "Pakistani", "priceRange": "Budget", "rating": 4.3, "specialty": "Fresh trout & daal", "location": "Keran" },
+      { "name": "PTDC Restaurant", "cuisine": "Pakistani", "priceRange": "Budget", "rating": 4.0, "specialty": "Traditional Pakistani meals", "location": "Kel" },
+      { "name": "Dhaba on the Neelum", "cuisine": "Local Kashmiri", "priceRange": "Budget", "rating": 4.4, "specialty": "Roghan Josh & Kashmiri tea", "location": "Sharda" }
+    ]
+  },
+  {
+    "id": "gwadar",
+    "name": "Gwadar",
+    "country": "Pakistan",
+    "aliases": ["gwadar", "gwadar beach", "balochistan coast"],
+    "type": "Relaxation",
+    "region": "Balochistan",
+    "baseCostPKR": 28000,
+    "weather": "Warm & sunny year-round",
+    "best_season": "October – March",
+    "language": "Balochi, Urdu",
+    "timezone": "PKT (UTC+5)",
+    "tipping": "Not expected",
+    "transportation": "Hired car, rickshaw",
+    "safety_rating": 3.8,
+    "user_rating": 4.2,
+    "highlights": [
+      "Gwadar Port — China-Pakistan Economic Corridor's crown jewel",
+      "Hammerhead Peninsula — natural rock formation jutting into the Arabian Sea",
+      "Kund Malir Beach — one of Pakistan's most pristine beaches",
+      "Princess of Hope — dramatic rock formation in Makran Coastal Highway"
+    ],
+    "dayTitles": [
+      "Arrival & Gwadar City Tour",
+      "Kund Malir Beach & Makran Coast",
+      "Hammerhead Peninsula Sunset",
+      "Gwadar Port & New City Tour",
+      "Pishukan Village & Fishing",
+      "Ormara Beach Day Trip",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Kund Malir Beach visit", "time": "08:00", "duration": "5 hours", "costPKR": 3000, "category": "Nature", "description": "Drive to Pakistan's most beautiful virgin beach — turquoise water, dramatic cliffs, pristine sand", "slot": "morning" },
+      { "name": "Hammerhead viewpoint sunset", "time": "17:00", "duration": "2 hours", "costPKR": 0, "category": "Sightseeing", "description": "Watch the sunset from the dramatic natural rock peninsula jutting into the Arabian Sea", "slot": "evening" },
+      { "name": "Gwadar Port tour", "time": "10:00", "duration": "2 hours", "costPKR": 500, "category": "Culture", "description": "Visit the strategic CPEC deep-sea port — modern infrastructure amid ancient fishing traditions", "slot": "morning" },
+      { "name": "Pishukan fishing village", "time": "06:00", "duration": "3 hours", "costPKR": 0, "category": "Culture", "description": "Watch local fishermen bring in the catch at dawn — authentic Balochi coastal culture", "slot": "morning" },
+      { "name": "Boat ride in the Arabian Sea", "time": "09:00", "duration": "3 hours", "costPKR": 2500, "category": "Adventure", "description": "Sailing trip along the dramatic Makran coast — dolphins, flying fish, and sea caves", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "PC Gwadar", "stars": 5, "pricePerNightPKR": 20000, "description": "Luxury hotel overlooking the Arabian Sea" },
+      { "name": "Zaver Pearl Continental", "stars": 4, "pricePerNightPKR": 15000, "description": "Beachfront resort with sea-view rooms" },
+      { "name": "Gwadar Inn", "stars": 3, "pricePerNightPKR": 6000, "description": "Budget-friendly central location" }
+    ],
+    "restaurants": [
+      { "name": "PC Gwadar Restaurant", "cuisine": "Pakistani & Seafood", "priceRange": "Upscale", "rating": 4.5, "specialty": "Grilled lobster & Arabian Sea fish", "location": "Pearl Continental" },
+      { "name": "Balochi Fish Corner", "cuisine": "Balochi Seafood", "priceRange": "Budget", "rating": 4.6, "specialty": "Fresh Hammour & Seeray fish curry", "location": "Fish Market" },
+      { "name": "Makran Dhaba", "cuisine": "Local Balochi", "priceRange": "Budget", "rating": 4.3, "specialty": "Sajji & Balochi rice", "location": "City Center" }
+    ]
+  },
+  {
+    "id": "dubai",
+    "name": "Dubai",
+    "country": "UAE",
+    "aliases": ["dubai", "uae", "united arab emirates", "abu dhabi"],
+    "type": "Luxury",
+    "region": "Middle East",
+    "baseCostPKR": 180000,
+    "weather": "Hot & sunny year-round",
+    "best_season": "October – April",
+    "language": "Arabic, English widely spoken",
+    "timezone": "GST (UTC+4)",
+    "tipping": "10–15% at restaurants",
+    "transportation": "Metro, Uber, taxis, Dubai buses",
+    "safety_rating": 4.9,
+    "user_rating": 4.8,
+    "highlights": [
+      "Burj Khalifa — world's tallest building at 828m",
+      "Dubai Mall — world's largest shopping mall",
+      "Palm Jumeirah — man-made palm island visible from space",
+      "Dubai Creek & Gold Souk — historic trading heart of old Dubai"
+    ],
+    "dayTitles": [
+      "Arrival & Downtown Dubai",
+      "Burj Khalifa & Dubai Mall",
+      "Palm Jumeirah & Atlantis",
+      "Dubai Creek & Old Souk Tour",
+      "Desert Safari Experience",
+      "Dubai Marina & JBR Beach",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Burj Khalifa At the Top", "time": "10:00", "duration": "3 hours", "costPKR": 8000, "category": "Sightseeing", "description": "Ascend to the 124th or 148th floor observation deck of the world's tallest building for 360° city views", "slot": "morning" },
+      { "name": "Dubai Mall & fountains", "time": "14:00", "duration": "4 hours", "costPKR": 0, "category": "Shopping", "description": "Explore the world's largest mall — ice rink, aquarium, 1,200+ shops, and the Dubai Fountain show at sunset", "slot": "afternoon" },
+      { "name": "Desert Safari & BBQ dinner", "time": "15:00", "duration": "6 hours", "costPKR": 15000, "category": "Adventure", "description": "Dune bashing, camel rides, sandboarding, henna painting, and traditional BBQ dinner under the stars", "slot": "afternoon" },
+      { "name": "Palm Jumeirah Monorail & Atlantis", "time": "10:00", "duration": "4 hours", "costPKR": 5000, "category": "Sightseeing", "description": "Ride the Palm Monorail and visit Atlantis The Palm — aquapark, Aquaventure, and underwater suites", "slot": "morning" },
+      { "name": "Dubai Creek & Gold Souk", "time": "09:00", "duration": "4 hours", "costPKR": 1000, "category": "Culture", "description": "Cross the creek by traditional Abra boat, explore the Gold and Spice Souks, and visit Al Fahidi Fort", "slot": "morning" },
+      { "name": "Dubai Marina dhow cruise", "time": "19:00", "duration": "3 hours", "costPKR": 12000, "category": "Leisure", "description": "Elegant dinner cruise on a traditional wooden dhow through Dubai Marina — city skyline at night", "slot": "evening" },
+      { "name": "Museum of the Future", "time": "10:00", "duration": "2 hours", "costPKR": 10000, "category": "Culture", "description": "Dubai's iconic torus-shaped building — an immersive journey into the technologies of 2071", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "Burj Al Arab", "stars": 7, "pricePerNightPKR": 280000, "description": "The world's most luxurious hotel — Dubai's iconic sail-shaped landmark" },
+      { "name": "Atlantis The Palm", "stars": 5, "pricePerNightPKR": 80000, "description": "Iconic Palm Jumeirah resort with waterpark and private beach" },
+      { "name": "Address Dubai Marina", "stars": 5, "pricePerNightPKR": 45000, "description": "Premium marina hotel with infinity pool and yacht views" }
+    ],
+    "restaurants": [
+      { "name": "At.mosphere (Burj Khalifa)", "cuisine": "International Fine Dining", "priceRange": "Upscale", "rating": 4.7, "specialty": "Multi-course tasting menus at 122nd floor", "location": "Burj Khalifa" },
+      { "name": "Nobu Dubai", "cuisine": "Japanese Fusion", "priceRange": "Upscale", "rating": 4.8, "specialty": "Black cod miso & signature sushi", "location": "Atlantis The Palm" },
+      { "name": "Al Fanar Restaurant", "cuisine": "Emirati", "priceRange": "Mid-range", "rating": 4.6, "specialty": "Traditional Emirati harees, machboos", "location": "Dubai Festival City" }
+    ]
+  },
+  {
+    "id": "london",
+    "name": "London",
+    "country": "UK",
+    "aliases": ["london", "uk", "england", "united kingdom", "britain", "british"],
+    "type": "Cultural",
+    "region": "Europe",
+    "baseCostPKR": 320000,
+    "weather": "Mild, overcast, frequent rain",
+    "best_season": "May – September",
+    "language": "English",
+    "timezone": "GMT (UTC+0) / BST (UTC+1) in summer",
+    "tipping": "10–15% at restaurants",
+    "transportation": "London Underground (Tube), buses, Uber, Black Cabs",
+    "safety_rating": 4.5,
+    "user_rating": 4.7,
+    "highlights": [
+      "Big Ben & Houses of Parliament — iconic Westminster skyline",
+      "British Museum — 8 million artifacts spanning all of human history",
+      "Tower of London & Tower Bridge — 1,000 years of royal history",
+      "Buckingham Palace & Royal Parks — home of the British monarchy"
+    ],
+    "dayTitles": [
+      "Arrival & Westminster Walk",
+      "Historic London — Tower & Thames",
+      "Museums & South Kensington",
+      "Notting Hill & West London",
+      "Greenwich & Royal Observatory",
+      "Day Trip to Oxford or Stonehenge",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Westminster & Parliament tour", "time": "10:00", "duration": "3 hours", "costPKR": 3000, "category": "Sightseeing", "description": "Walk Big Ben, Westminster Abbey, Houses of Parliament, and Churchill's War Rooms — the seat of British power", "slot": "morning" },
+      { "name": "Tower of London & Crown Jewels", "time": "10:00", "duration": "3 hours", "costPKR": 8000, "category": "Culture", "description": "1,000 years of royal history — Crown Jewels, Beefeater guards, traitors' gate, and Tower Bridge views", "slot": "morning" },
+      { "name": "British Museum visit", "time": "10:00", "duration": "4 hours", "costPKR": 0, "category": "Culture", "description": "One of the world's greatest museums — Rosetta Stone, Elgin Marbles, Egyptian mummies — all free admission", "slot": "morning" },
+      { "name": "Thames River cruise", "time": "14:00", "duration": "2 hours", "costPKR": 5000, "category": "Sightseeing", "description": "Boat along the Thames from Westminster to Greenwich — stunning views of London's skyline", "slot": "afternoon" },
+      { "name": "Notting Hill & Portobello Road", "time": "10:00", "duration": "3 hours", "costPKR": 0, "category": "Culture", "description": "Wander the colorful pastel houses of Notting Hill and browse the famous Portobello Road antiques market", "slot": "morning" },
+      { "name": "Oxford day trip", "time": "09:00", "duration": "8 hours", "costPKR": 8000, "category": "Culture", "description": "Day trip to the 'City of Dreaming Spires' — Oxford University colleges, Christ Church, covered market", "slot": "morning" },
+      { "name": "Buckingham Palace & St James's Park", "time": "10:00", "duration": "3 hours", "costPKR": 0, "category": "Sightseeing", "description": "Watch the Changing of the Guard at Buckingham Palace and stroll through the beautiful Royal Parks", "slot": "morning" },
+      { "name": "West End theatre show", "time": "19:30", "duration": "3 hours", "costPKR": 18000, "category": "Culture", "description": "World-class theatre in London's West End — Hamilton, The Lion King, Phantom of the Opera", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "The Ritz London", "stars": 5, "pricePerNightPKR": 150000, "description": "London's most iconic luxury hotel since 1906" },
+      { "name": "Claridge's Hotel", "stars": 5, "pricePerNightPKR": 120000, "description": "Art Deco masterpiece in Mayfair — royalty's favourite" },
+      { "name": "Premier Inn City of London", "stars": 3, "pricePerNightPKR": 30000, "description": "Reliable mid-budget chain hotel near major attractions" }
+    ],
+    "restaurants": [
+      { "name": "Dishoom", "cuisine": "Indian / Bombay Café", "priceRange": "Mid-range", "rating": 4.8, "specialty": "Signature bacon naan roll & black daal", "location": "Covent Garden / King's Cross" },
+      { "name": "The Ledbury", "cuisine": "Modern European Fine Dining", "priceRange": "Upscale", "rating": 4.9, "specialty": "Tasting menus with seasonal British ingredients", "location": "Notting Hill" },
+      { "name": "Borough Market Stalls", "cuisine": "Global Street Food", "priceRange": "Budget", "rating": 4.7, "specialty": "Raclette, salt beef bagels, fresh oysters", "location": "London Bridge" }
+    ]
+  },
+  {
+    "id": "istanbul",
+    "name": "Istanbul",
+    "country": "Turkey",
+    "aliases": ["istanbul", "turkey", "turkish", "istanbul turkey"],
+    "type": "Cultural",
+    "region": "Europe / Asia",
+    "baseCostPKR": 150000,
+    "weather": "Mild, four seasons",
+    "best_season": "April – June, September – November",
+    "language": "Turkish, English in tourist areas",
+    "timezone": "TRT (UTC+3)",
+    "tipping": "10% at restaurants",
+    "transportation": "Metro, tram, ferry, taxis",
+    "safety_rating": 4.3,
+    "user_rating": 4.7,
+    "highlights": [
+      "Hagia Sophia — 1,500-year-old wonder of the ancient world",
+      "Grand Bazaar — world's oldest and largest covered market (4,000+ shops)",
+      "Topkapi Palace — home of Ottoman Sultans for 400 years",
+      "Bosphorus Strait — the legendary waterway connecting two continents"
+    ],
+    "dayTitles": [
+      "Arrival & Old City (Sultanahmet)",
+      "Hagia Sophia & Topkapi Palace",
+      "Grand Bazaar & Spice Market",
+      "Bosphorus Cruise",
+      "Asian Side & Kadikoy",
+      "Princes' Islands Day Trip",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Hagia Sophia & Blue Mosque", "time": "09:00", "duration": "4 hours", "costPKR": 3000, "category": "Culture", "description": "Visit the 1,500-year-old Hagia Sophia and the stunning 17th century Blue Mosque — two world wonders in one morning", "slot": "morning" },
+      { "name": "Topkapi Palace visit", "time": "09:00", "duration": "4 hours", "costPKR": 4000, "category": "Culture", "description": "Explore the 15th century Ottoman palace — Harem, Treasury with the 86-carat Spoonmaker's Diamond, Imperial Hall", "slot": "morning" },
+      { "name": "Grand Bazaar shopping", "time": "10:00", "duration": "3 hours", "costPKR": 0, "category": "Shopping", "description": "Get lost in the world's oldest shopping mall — 4,000+ shops selling jewelry, carpets, spices, and leather", "slot": "morning" },
+      { "name": "Bosphorus full-day cruise", "time": "10:00", "duration": "6 hours", "costPKR": 5000, "category": "Sightseeing", "description": "Cruise the legendary strait separating Europe and Asia — Ottoman palaces, fortresses, and the Black Sea", "slot": "morning" },
+      { "name": "Kadikoy food tour", "time": "11:00", "duration": "4 hours", "costPKR": 4000, "category": "Food", "description": "Join a food tour of Istanbul's hippest neighborhood — Midye dolma, Turkish coffee, baklava, and fish sandwiches", "slot": "morning" },
+      { "name": "Turkish bath (Hamam)", "time": "15:00", "duration": "2 hours", "costPKR": 6000, "category": "Leisure", "description": "Traditional Ottoman hammam experience — marble halls, foam massage, and deep relaxation", "slot": "afternoon" },
+      { "name": "Spice Bazaar & Galata Bridge", "time": "14:00", "duration": "2 hours", "costPKR": 0, "category": "Shopping", "description": "Browse the fragrant Mısır Çarşısı (Spice Market) and walk across the iconic Galata Bridge over the Golden Horn", "slot": "afternoon" }
+    ],
+    "hotels": [
+      { "name": "Four Seasons Istanbul at Sultanahmet", "stars": 5, "pricePerNightPKR": 75000, "description": "Former Ottoman prison converted to a luxury hotel — Hagia Sophia views" },
+      { "name": "Ciragan Palace Kempinski", "stars": 5, "pricePerNightPKR": 90000, "description": "19th century Ottoman palace on the Bosphorus waterfront" },
+      { "name": "Hotel Amira Istanbul", "stars": 4, "pricePerNightPKR": 20000, "description": "Boutique hotel in the heart of Sultanahmet" }
+    ],
+    "restaurants": [
+      { "name": "Nusr-Et Steakhouse (Salt Bae)", "cuisine": "Turkish Steakhouse", "priceRange": "Upscale", "rating": 4.6, "specialty": "Signature Ottoman steak & salt ceremony", "location": "Etiler" },
+      { "name": "Karaköy Güllüoğlu", "cuisine": "Turkish Sweets", "priceRange": "Budget", "rating": 4.9, "specialty": "World's best baklava since 1820", "location": "Karaköy" },
+      { "name": "Çiya Sofrası", "cuisine": "Anatolian Regional", "priceRange": "Budget", "rating": 4.8, "specialty": "Slow-cooked Anatolian stews", "location": "Kadikoy" }
+    ]
+  },
+  {
+    "id": "bali",
+    "name": "Bali",
+    "country": "Indonesia",
+    "aliases": ["bali", "indonesia", "ubud", "seminyak", "kuta", "bali indonesia"],
+    "type": "Relaxation",
+    "region": "Southeast Asia",
+    "baseCostPKR": 120000,
+    "weather": "Tropical, warm year-round",
+    "best_season": "April – October (dry season)",
+    "language": "Balinese, Indonesian, English in tourist areas",
+    "timezone": "WITA (UTC+8)",
+    "tipping": "10% at restaurants",
+    "transportation": "Scooter hire, Grab, private driver",
+    "safety_rating": 4.5,
+    "user_rating": 4.8,
+    "highlights": [
+      "Tanah Lot Temple — dramatic sea temple on an offshore rock",
+      "Ubud Monkey Forest — sacred forest with 700+ Balinese long-tailed macaques",
+      "Tegallalang Rice Terraces — UNESCO-listed cascading green terraces",
+      "Mount Batur Sunrise Trek — 1,717m active volcano hike"
+    ],
+    "dayTitles": [
+      "Arrival & Seminyak Beach",
+      "Ubud Culture & Monkey Forest",
+      "Tegallalang & Coffee Plantation",
+      "Mount Batur Sunrise Trek",
+      "Tanah Lot & Sea Temples",
+      "Water Sports & Nusa Penida",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Tanah Lot sunset visit", "time": "17:00", "duration": "3 hours", "costPKR": 2000, "category": "Sightseeing", "description": "Watch the sun set behind Bali's most iconic sea temple perched on an offshore rock", "slot": "evening" },
+      { "name": "Ubud Monkey Forest", "time": "09:00", "duration": "2 hours", "costPKR": 2500, "category": "Nature", "description": "Sacred forest sanctuary home to 700+ Balinese macaques — ancient temples amid towering jungle", "slot": "morning" },
+      { "name": "Tegallalang Rice Terraces", "time": "09:00", "duration": "3 hours", "costPKR": 1500, "category": "Nature", "description": "UNESCO-listed cascading rice terraces north of Ubud — walk between emerald paddies with volcanic backdrop", "slot": "morning" },
+      { "name": "Mount Batur sunrise trek", "time": "02:00", "duration": "6 hours", "costPKR": 8000, "category": "Adventure", "description": "Guided pre-dawn hike to the crater rim of Bali's active volcano — catch sunrise above the clouds at 1,717m", "slot": "morning" },
+      { "name": "Seminyak beach club afternoon", "time": "14:00", "duration": "5 hours", "costPKR": 8000, "category": "Leisure", "description": "Relax at Bali's most fashionable beach clubs — pool, sunset cocktails, and beachfront dining", "slot": "afternoon" },
+      { "name": "Traditional Balinese cooking class", "time": "09:00", "duration": "4 hours", "costPKR": 6000, "category": "Food", "description": "Market tour and hands-on cooking class — learn to make Nasi Goreng, Satay, Rendang, and Balinese Black Rice", "slot": "morning" },
+      { "name": "Kecak fire dance performance", "time": "18:00", "duration": "2 hours", "costPKR": 3000, "category": "Culture", "description": "Dramatic sunset dance performance at Uluwatu Temple cliff — chanting, fire, and Ramayana epic story", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "Four Seasons Bali at Sayan", "stars": 5, "pricePerNightPKR": 90000, "description": "Iconic jungle resort in Ubud suspended above the Ayung River" },
+      { "name": "Katamama Boutique Hotel", "stars": 5, "pricePerNightPKR": 55000, "description": "Artisan luxury hotel handcrafted from Javanese teak in Seminyak" },
+      { "name": "Alaya Resort Ubud", "stars": 4, "pricePerNightPKR": 25000, "description": "Boutique resort with jungle views and rice terrace surroundings" }
+    ],
+    "restaurants": [
+      { "name": "Locavore", "cuisine": "Indonesian Fine Dining", "priceRange": "Upscale", "rating": 4.9, "specialty": "Forager's tasting menu of hyper-local Balinese ingredients", "location": "Ubud" },
+      { "name": "Sarong Restaurant", "cuisine": "Asian Fusion", "priceRange": "Upscale", "rating": 4.7, "specialty": "Indonesian, Thai, and Vietnamese fusion tapas", "location": "Seminyak" },
+      { "name": "Warung Babi Guling Ibu Oka", "cuisine": "Balinese", "priceRange": "Budget", "rating": 4.8, "specialty": "Legendary suckling pig — Bali's most famous street food", "location": "Ubud" }
+    ]
+  },
+  {
+    "id": "kuala-lumpur",
+    "name": "Kuala Lumpur",
+    "country": "Malaysia",
+    "aliases": ["kuala lumpur", "kl", "malaysia", "malaysian"],
+    "type": "Mixed",
+    "region": "Southeast Asia",
+    "baseCostPKR": 110000,
+    "weather": "Tropical, hot and humid year-round",
+    "best_season": "May – July, December – February",
+    "language": "Malay, English, Mandarin, Tamil",
+    "timezone": "MYT (UTC+8)",
+    "tipping": "Not mandatory, 10% appreciated",
+    "transportation": "LRT, Monorail, Grab, taxis",
+    "safety_rating": 4.3,
+    "user_rating": 4.5,
+    "highlights": [
+      "Petronas Twin Towers — world's tallest twin towers at 452m",
+      "Batu Caves — iconic limestone caves with a 43m golden statue",
+      "Chinatown (Petaling Street) — vibrant night market and street food",
+      "KL Forest Eco Park — urban rainforest in the city center"
+    ],
+    "dayTitles": [
+      "Arrival & City Center",
+      "Petronas Towers & KLCC Park",
+      "Batu Caves & Hindu Heritage",
+      "Chinatown & Cultural Quarter",
+      "Day Trip to Genting Highlands",
+      "Shopping & Bukit Bintang",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Petronas Twin Towers Sky Bridge", "time": "09:00", "duration": "2 hours", "costPKR": 5000, "category": "Sightseeing", "description": "Walk the Sky Bridge connecting the world's tallest twin towers on the 41st and 42nd floors", "slot": "morning" },
+      { "name": "Batu Caves & Sri Murugan", "time": "08:00", "duration": "3 hours", "costPKR": 0, "category": "Culture", "description": "Climb 272 rainbow steps to the sacred limestone caves — the 43m golden Lord Murugan statue and ancient Hindu shrines", "slot": "morning" },
+      { "name": "Petaling Street night market", "time": "18:00", "duration": "3 hours", "costPKR": 2000, "category": "Food", "description": "Kuala Lumpur's iconic Chinatown night market — counterfeit goods, street food, and Cantonese atmosphere", "slot": "evening" },
+      { "name": "KL Forest Eco Park walk", "time": "09:00", "duration": "2 hours", "costPKR": 500, "category": "Nature", "description": "Canopy walkway through a 11-hectare patch of urban rainforest — the world's oldest equatorial rainforest", "slot": "morning" },
+      { "name": "Genting Highlands day trip", "time": "09:00", "duration": "6 hours", "costPKR": 6000, "category": "Adventure", "description": "Cable car ride to Malaysia's highland resort — theme park, cool mountain air at 1,800m", "slot": "morning" },
+      { "name": "Jalan Alor food street", "time": "19:00", "duration": "2 hours", "costPKR": 2500, "category": "Food", "description": "KL's most famous street food strip — Char Kway Teow, BBQ chicken wings, seafood, and tropical fruits", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "Mandarin Oriental KL", "stars": 5, "pricePerNightPKR": 55000, "description": "Luxury hotel overlooking the Petronas Towers and KLCC Park" },
+      { "name": "EQ Kuala Lumpur", "stars": 5, "pricePerNightPKR": 40000, "description": "Ultra-modern luxury in the KLCC financial district" },
+      { "name": "Tune Hotel KLIA2", "stars": 3, "pricePerNightPKR": 8000, "description": "Budget-friendly airport hotel ideal for transit stops" }
+    ],
+    "restaurants": [
+      { "name": "Madam Kwan's", "cuisine": "Malaysian", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Nasi Lemak, Laksa, and Roti Canai", "location": "KLCC / Pavilion" },
+      { "name": "Jalan Ipoh Claypot", "cuisine": "Chinese Malaysian", "priceRange": "Budget", "rating": 4.7, "specialty": "Claypot chicken rice and pork rib soup", "location": "Jalan Ipoh" },
+      { "name": "Thirty8 (Grand Hyatt)", "cuisine": "International Buffet", "priceRange": "Upscale", "rating": 4.6, "specialty": "Skyline breakfast buffet 180m up", "location": "Grand Hyatt KL" }
+    ]
+  },
+  {
+    "id": "paris",
+    "name": "Paris",
+    "country": "France",
+    "aliases": ["paris", "france", "french", "paris france"],
+    "type": "Romantic",
+    "region": "Europe",
+    "baseCostPKR": 280000,
+    "weather": "Mild, four seasons",
+    "best_season": "April – June, September – October",
+    "language": "French, English in tourist areas",
+    "timezone": "CET (UTC+1)",
+    "tipping": "Round up or 5–10% appreciated",
+    "transportation": "Métro, RER, buses, Vélib' bikes",
+    "safety_rating": 4.2,
+    "user_rating": 4.7,
+    "highlights": [
+      "Eiffel Tower — the world's most visited monument, 330m tall",
+      "The Louvre — world's largest art museum (Mona Lisa, Venus de Milo)",
+      "Montmartre & Sacré-Cœur — artists' hilltop village above Paris",
+      "Palace of Versailles — Louis XIV's legendary palace and gardens"
+    ],
+    "dayTitles": [
+      "Arrival & Champs-Élysées",
+      "Eiffel Tower & Trocadéro",
+      "The Louvre & Seine Cruise",
+      "Montmartre & Moulin Rouge",
+      "Versailles Palace & Gardens",
+      "Marais & Notre-Dame",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Eiffel Tower summit visit", "time": "10:00", "duration": "3 hours", "costPKR": 7000, "category": "Sightseeing", "description": "Ascend to the summit of Paris's iconic iron lady — views stretching 70km on clear days", "slot": "morning" },
+      { "name": "Louvre Museum highlights tour", "time": "09:00", "duration": "4 hours", "costPKR": 5000, "category": "Culture", "description": "The world's greatest museum — Mona Lisa, Venus de Milo, Winged Victory — across 35,000 works of art", "slot": "morning" },
+      { "name": "Seine River dinner cruise", "time": "20:00", "duration": "2 hours", "costPKR": 15000, "category": "Leisure", "description": "Romantic dinner on the Seine — Eiffel Tower sparkle every hour, Notre-Dame lit up, bridges of Paris", "slot": "evening" },
+      { "name": "Versailles Palace day trip", "time": "09:00", "duration": "7 hours", "costPKR": 8000, "category": "Culture", "description": "Visit Louis XIV's legendary Palace of Versailles — Hall of Mirrors, royal apartments, and 800-hectare gardens", "slot": "morning" },
+      { "name": "Montmartre & Sacré-Cœur walk", "time": "10:00", "duration": "4 hours", "costPKR": 0, "category": "Culture", "description": "Wander the winding streets of Paris's artists' village — street painters, cafés, and the stunning white Sacré-Cœur", "slot": "morning" },
+      { "name": "Musée d'Orsay visit", "time": "10:00", "duration": "3 hours", "costPKR": 5000, "category": "Culture", "description": "World's finest Impressionist collection — Monet, Renoir, Van Gogh, Degas in a converted railway station", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "Le Meurice", "stars": 5, "pricePerNightPKR": 180000, "description": "Palace hotel overlooking the Tuileries Garden since 1835" },
+      { "name": "Hotel Lutetia", "stars": 5, "pricePerNightPKR": 120000, "description": "Art Deco Left Bank institution — Pablo Picasso's favourite" },
+      { "name": "ibis Styles Paris Montmartre", "stars": 3, "pricePerNightPKR": 25000, "description": "Budget-friendly Montmartre hotel near Sacré-Cœur" }
+    ],
+    "restaurants": [
+      { "name": "Le Jules Verne (Eiffel Tower)", "cuisine": "French Fine Dining", "priceRange": "Upscale", "rating": 4.7, "specialty": "Alain Ducasse cuisine on the 2nd floor of the Eiffel Tower", "location": "Eiffel Tower" },
+      { "name": "Café de Flore", "cuisine": "Classic French Café", "priceRange": "Mid-range", "rating": 4.5, "specialty": "Croissants, Café au lait, Croque Monsieur", "location": "Saint-Germain" },
+      { "name": "Bouillon Chartier", "cuisine": "Traditional French Brasserie", "priceRange": "Budget", "rating": 4.8, "specialty": "Classic French brasserie food since 1896", "location": "9th Arrondissement" }
+    ]
+  },
+  {
+    "id": "barcelona",
+    "name": "Barcelona",
+    "country": "Spain",
+    "aliases": ["barcelona", "spain", "spanish", "barcelona spain"],
+    "type": "Cultural",
+    "region": "Europe",
+    "baseCostPKR": 240000,
+    "weather": "Mediterranean, warm and sunny",
+    "best_season": "April – June, September – October",
+    "language": "Catalan, Spanish, English in tourist areas",
+    "timezone": "CET (UTC+1)",
+    "tipping": "Round up or 5–10% at restaurants",
+    "transportation": "Metro, buses, taxis, Bicing bikes",
+    "safety_rating": 4.0,
+    "user_rating": 4.7,
+    "highlights": [
+      "Sagrada Família — Gaudí's unfinished masterpiece under construction since 1882",
+      "Park Güell — Gaudí's mosaic wonderland overlooking the city",
+      "La Barceloneta Beach — 4km of Mediterranean waterfront",
+      "La Boqueria Market — Barcelona's legendary 175-year-old food market"
+    ],
+    "dayTitles": [
+      "Arrival & Las Ramblas",
+      "Gaudí Architecture Trail",
+      "Gothic Quarter & Markets",
+      "Barceloneta Beach Day",
+      "Park Güell & Montjuïc",
+      "Day Trip to Montserrat",
+      "Departure"
+    ],
+    "activities": [
+      { "name": "Sagrada Família visit", "time": "09:00", "duration": "3 hours", "costPKR": 7000, "category": "Culture", "description": "Gaudí's life's work — the most visited monument in Spain, with towers and towers of stained glass", "slot": "morning" },
+      { "name": "Park Güell morning walk", "time": "08:00", "duration": "2 hours", "costPKR": 4500, "category": "Culture", "description": "Gaudí's hillside park — mosaic terraces, gingerbread gatehouses, and 360° city-to-sea panoramas", "slot": "morning" },
+      { "name": "La Boqueria Market food tour", "time": "10:00", "duration": "2 hours", "costPKR": 3000, "category": "Food", "description": "Barcelona's legendary 175-year-old market — Jamón, manchego, fresh seafood, pintxos, and tropical fruits", "slot": "morning" },
+      { "name": "Gothic Quarter walking tour", "time": "10:00", "duration": "3 hours", "costPKR": 3500, "category": "Culture", "description": "2,000-year-old Roman Barcelona — ancient walls, cathedral, medieval squares and narrow stone lanes", "slot": "morning" },
+      { "name": "Barceloneta beach afternoon", "time": "14:00", "duration": "4 hours", "costPKR": 0, "category": "Leisure", "description": "Barcelona's famous Mediterranean beach — sunbathe, swim, eat fresh seafood paella and sangría", "slot": "afternoon" },
+      { "name": "Montserrat mountain day trip", "time": "09:00", "duration": "7 hours", "costPKR": 6000, "category": "Adventure", "description": "Cable car to the sacred mountain monastery — extraordinary rock formations 1,236m above sea level", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "Hotel Arts Barcelona", "stars": 5, "pricePerNightPKR": 80000, "description": "Iconic 44-storey tower on the Barceloneta waterfront" },
+      { "name": "W Barcelona", "stars": 5, "pricePerNightPKR": 70000, "description": "Sail-shaped luxury hotel on the beachfront promenade" },
+      { "name": "Generator Barcelona", "stars": 3, "pricePerNightPKR": 12000, "description": "Stylish design hostel/hotel in Gràcia neighborhood" }
+    ],
+    "restaurants": [
+      { "name": "El Celler de Can Roca", "cuisine": "Catalan Fine Dining", "priceRange": "Upscale", "rating": 5.0, "specialty": "World's #1 restaurant — avant-garde Catalan cuisine", "location": "Girona (day trip)" },
+      { "name": "La Mar Salada", "cuisine": "Catalan Seafood", "priceRange": "Mid-range", "rating": 4.7, "specialty": "Black rice, grilled calamari, fresh seafood paella", "location": "Barceloneta" },
+      { "name": "Bar Cañete", "cuisine": "Traditional Catalan Tapas", "priceRange": "Mid-range", "rating": 4.8, "specialty": "Croquetas, Spanish omelette, anchovies", "location": "El Raval" }
+    ]
+  },
+  {
+    "id": "bangkok",
+    "name": "Bangkok",
+    "country": "Thailand",
+    "aliases": ["bangkok", "thailand", "thai", "phuket", "chiang mai", "pattaya", "koh samui", "krabi", "thai land"],
+    "type": "Cultural",
+    "region": "Southeast Asia",
+    "baseCostPKR": 150000,
+    "weather": "Tropical — hot and humid year-round, monsoon Jun–Oct",
+    "best_season": "November – February",
+    "language": "Thai",
+    "timezone": "ICT (UTC+7)",
+    "tipping": "Not mandatory but appreciated — round up the bill",
+    "transportation": "BTS Skytrain, MRT subway, tuk-tuks, taxis, river ferries",
+    "safety_rating": 4.2,
+    "user_rating": 4.7,
+    "highlights": [
+      "Grand Palace & Wat Phra Kaew — Bangkok's most spectacular royal complex",
+      "Wat Arun — the iconic Temple of Dawn on the Chao Phraya River",
+      "Chatuchak Weekend Market — one of the world's largest markets with 15,000 stalls",
+      "Yaowarat Chinatown — Bangkok's legendary street food paradise"
+    ],
+    "dayTitles": [
+      "Arrival & Riverside Temples",
+      "Grand Palace & Wat Pho",
+      "Floating Market & Canals",
+      "Street Food & Chatuchak Market",
+      "Ayutthaya Ancient City Day Trip",
+      "Shopping & Night Markets",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Grand Palace Tour", "time": "09:00", "duration": "3 hours", "costPKR": 5600, "category": "Sightseeing", "description": "Marvel at the dazzling Grand Palace complex, home to the sacred Emerald Buddha and centuries of royal history", "slot": "morning" },
+      { "name": "Wat Pho Reclining Buddha", "time": "13:00", "duration": "1.5 hours", "costPKR": 1400, "category": "Culture", "description": "See the magnificent 46-meter gold reclining Buddha and receive a traditional Thai massage at this ancient temple", "slot": "afternoon" },
+      { "name": "Chao Phraya Sunset Cruise", "time": "17:00", "duration": "2 hours", "costPKR": 4200, "category": "Relaxation", "description": "Dinner cruise along Bangkok's iconic river, passing illuminated temples and the glittering skyline at dusk", "slot": "evening" },
+      { "name": "Damnoen Saduak Floating Market", "time": "07:00", "duration": "3 hours", "costPKR": 5600, "category": "Culture", "description": "Explore the vibrant floating market by longboat, sampling tropical fruits and traditional Thai snacks from canal vendors", "slot": "morning" },
+      { "name": "Chatuchak Weekend Market", "time": "10:00", "duration": "3 hours", "costPKR": 1000, "category": "Shopping", "description": "Browse one of the world's largest markets — 15,000 stalls of antiques, street food, fashion, and local crafts", "slot": "morning" },
+      { "name": "Yaowarat Chinatown Food Tour", "time": "18:00", "duration": "3 hours", "costPKR": 2800, "category": "Food", "description": "Guided street food walk through Bangkok's famous Chinatown — dim sum, roast duck, mango sticky rice, and pad thai", "slot": "evening" },
+      { "name": "Muay Thai Evening Show", "time": "20:00", "duration": "2.5 hours", "costPKR": 8400, "category": "Entertainment", "description": "Watch an electrifying live Muay Thai boxing match at Rajadamnern Stadium — Thailand's national sport at its best", "slot": "evening" },
+      { "name": "Wat Arun Sunrise Visit", "time": "06:30", "duration": "2 hours", "costPKR": 1400, "category": "Sightseeing", "description": "Catch the golden sunrise over the iconic Temple of Dawn — one of Bangkok's most photographed landmarks", "slot": "morning" }
+    ],
+    "hotels": [
+      { "name": "Mandarin Oriental Bangkok", "stars": 5, "pricePerNightPKR": 45000, "description": "Legendary riverside luxury hotel, one of the world's finest since 1876" },
+      { "name": "Novotel Bangkok Silom", "stars": 4, "pricePerNightPKR": 15000, "description": "Modern hotel in Bangkok's business district with rooftop pool" },
+      { "name": "Lub d Bangkok Silom", "stars": 3, "pricePerNightPKR": 7000, "description": "Trendy boutique hostel with private rooms, popular with backpackers" }
+    ],
+    "restaurants": [
+      { "name": "Jay Fai", "cuisine": "Thai Street Food", "priceRange": "Mid-range", "rating": 4.9, "specialty": "Michelin-starred crab omelette and dry Tom Yum", "location": "Maha Chai Road, Old City" },
+      { "name": "Pai Kha Floating Restaurant", "cuisine": "Thai Seafood", "priceRange": "Mid-range", "rating": 4.6, "specialty": "Fresh river prawns and tom yum soup on the Chao Phraya", "location": "Rattanakosin Island" },
+      { "name": "T&K Seafood Yaowarat", "cuisine": "Thai-Chinese", "priceRange": "Budget", "rating": 4.7, "specialty": "Grilled river prawns, crab curry, and roast duck", "location": "Yaowarat Chinatown" },
+      { "name": "Gaggan Anand", "cuisine": "Progressive Indian-Thai", "priceRange": "Upscale", "rating": 4.9, "specialty": "Asia's best restaurant — progressive emoji tasting menu", "location": "Lang Suan Road" }
+    ]
+  },
+  {
+    "id": "tokyo",
+    "name": "Tokyo",
+    "country": "Japan",
+    "aliases": ["tokyo", "japan", "japanese", "kyoto", "osaka", "hiroshima", "nara", "japani", "nippon", "shibuya", "shinjuku", "akihabara"],
+    "type": "Cultural",
+    "region": "East Asia",
+    "baseCostPKR": 350000,
+    "weather": "Four seasons — cherry blossoms in spring, humid summers, colorful autumn, cold winters",
+    "best_season": "March–May (cherry blossoms) or October–November",
+    "language": "Japanese",
+    "timezone": "JST (UTC+9)",
+    "tipping": "Tipping is considered rude in Japan — never tip",
+    "transportation": "Tokyo Metro, JR trains, Shinkansen bullet train, buses, taxis",
+    "safety_rating": 5.0,
+    "user_rating": 4.9,
+    "highlights": [
+      "Senso-ji Temple Asakusa — Tokyo's oldest and most iconic Buddhist temple, dating to 645 AD",
+      "Shibuya Crossing — the world's busiest pedestrian crossing, a true Tokyo landmark",
+      "Tsukiji Outer Market — the world's freshest sushi breakfast experience",
+      "Akihabara Electric Town — anime, manga, and electronics paradise"
+    ],
+    "dayTitles": [
+      "Arrival & Shinjuku Orientation",
+      "Asakusa Temples & Senso-ji",
+      "Shibuya & Harajuku Fashion",
+      "Akihabara & Ginza Shopping",
+      "Day Trip to Nikko or Mt. Fuji",
+      "Tsukiji Market & Digital Art",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Senso-ji Temple Morning Visit", "time": "08:00", "duration": "2.5 hours", "costPKR": 0, "category": "Culture", "description": "Explore Tokyo's oldest temple with the iconic Kaminarimon Thunder Gate and Nakamise shopping street — arrive early to beat the crowds", "slot": "morning" },
+      { "name": "Shibuya Crossing Night Experience", "time": "20:00", "duration": "1.5 hours", "costPKR": 0, "category": "Sightseeing", "description": "Stand at the world-famous scramble crossing — best experienced at night when thousands cross simultaneously in a dazzling light show", "slot": "evening" },
+      { "name": "Tsukiji Outer Market Breakfast", "time": "07:00", "duration": "2 hours", "costPKR": 2800, "category": "Food", "description": "Have the freshest sushi, tamagoyaki and tuna sashimi at the famous Tsukiji outer market stalls — a Tokyo bucket-list experience", "slot": "morning" },
+      { "name": "teamLab Borderless Digital Art", "time": "10:00", "duration": "3 hours", "costPKR": 8400, "category": "Art", "description": "Walk through breathtaking immersive digital art installations — one of Tokyo's most unique and unmissable experiences", "slot": "morning" },
+      { "name": "Akihabara Anime & Tech Tour", "time": "14:00", "duration": "3 hours", "costPKR": 1400, "category": "Shopping", "description": "Explore Tokyo's electronics and anime district — multi-floor anime stores, retro game shops, and the latest gadgets", "slot": "afternoon" },
+      { "name": "Harajuku Takeshita Street", "time": "13:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Stroll through Tokyo's fashion capital, try crepes and cotton candy, and witness the iconic Harajuku street fashion subculture", "slot": "afternoon" },
+      { "name": "Tokyo Skytree Observation Deck", "time": "17:00", "duration": "2 hours", "costPKR": 5600, "category": "Sightseeing", "description": "Stunning 360° panoramic views of Tokyo from the world's second-tallest structure — magical at sunset and after dark", "slot": "evening" },
+      { "name": "Ramen & Izakaya Night", "time": "19:00", "duration": "2.5 hours", "costPKR": 3500, "category": "Food", "description": "Authentic tonkotsu ramen in a tiny traditional shop, followed by drinks and yakitori skewers at a local izakaya (Japanese pub)", "slot": "evening" }
+    ],
+    "hotels": [
+      { "name": "The Peninsula Tokyo", "stars": 5, "pricePerNightPKR": 70000, "description": "Ultra-luxury hotel with stunning views of the Imperial Palace gardens — impeccable Japanese service" },
+      { "name": "Shibuya Excel Hotel Tokyu", "stars": 4, "pricePerNightPKR": 28000, "description": "Directly connected to Shibuya station — the best location in Tokyo, above the famous crossing" },
+      { "name": "Khaosan Tokyo Kabuki", "stars": 3, "pricePerNightPKR": 9000, "description": "Beloved hostel in Asakusa near Senso-ji — great location and social atmosphere for solo travelers" }
+    ],
+    "restaurants": [
+      { "name": "Ichiran Ramen Shibuya", "cuisine": "Tonkotsu Ramen", "priceRange": "Budget", "rating": 4.7, "specialty": "Solo dining booths, customizable tonkotsu ramen broth", "location": "Shibuya, Tokyo" },
+      { "name": "Tsuta Ramen", "cuisine": "Soy Sauce Ramen", "priceRange": "Mid-range", "rating": 4.8, "specialty": "World's first Michelin-starred ramen — truffle soy sauce broth", "location": "Sugamo, Tokyo" },
+      { "name": "Sushi Saito", "cuisine": "Omakase Sushi", "priceRange": "Upscale", "rating": 5.0, "specialty": "3-Michelin-star omakase — widely considered the best sushi in the world", "location": "Minato, Tokyo" },
+      { "name": "Gonpachi Nishi-Azabu", "cuisine": "Japanese Izakaya", "priceRange": "Mid-range", "rating": 4.6, "specialty": "The 'Kill Bill' restaurant — yakitori, soba noodles, Japanese sake", "location": "Nishi-Azabu, Tokyo" }
+    ]
+  },
+  {
+    "id": "singapore",
+    "name": "Singapore",
+    "country": "Singapore",
+    "aliases": ["singapore", "singaporean", "sg", "sing", "marina bay", "sentosa"],
+    "type": "Luxury",
+    "region": "Southeast Asia",
+    "baseCostPKR": 200000,
+    "weather": "Tropical — hot and humid year-round with occasional showers",
+    "best_season": "February – April (driest months)",
+    "language": "English, Mandarin, Malay, Tamil",
+    "timezone": "SGT (UTC+8)",
+    "tipping": "Not expected — service charge usually included in bills",
+    "transportation": "MRT (Mass Rapid Transit), buses, Grab taxis, walking",
+    "safety_rating": 5.0,
+    "user_rating": 4.8,
+    "highlights": [
+      "Marina Bay Sands — iconic rooftop infinity pool and skyline views",
+      "Gardens by the Bay — futuristic Supertree Grove light show at night",
+      "Hawker Centre food culture — 50+ dishes under one roof from $2",
+      "Sentosa Island — beaches, Universal Studios, cable car rides"
+    ],
+    "dayTitles": [
+      "Arrival & Marina Bay",
+      "Gardens by the Bay & Supertrees",
+      "Chinatown & Little India Cultural Walk",
+      "Sentosa Island & Universal Studios",
+      "Orchard Road Shopping & Hawker Food",
+      "Zoo & Night Safari",
+      "Departure Day"
+    ],
+    "activities": [
+      { "name": "Marina Bay Sands SkyPark", "time": "18:00", "duration": "2 hours", "costPKR": 7000, "category": "Sightseeing", "description": "Stunning 360° views of Singapore from the famous rooftop observation deck — best at sunset", "slot": "evening" },
+      { "name": "Gardens by the Bay Night Show", "time": "19:45", "duration": "1 hour", "costPKR": 4200, "category": "Entertainment", "description": "Spectacular Garden Rhapsody light and sound show among the 50-meter illuminated Supertrees — free to watch from outside", "slot": "evening" },
+      { "name": "Chinatown Heritage Walk", "time": "09:00", "duration": "2.5 hours", "costPKR": 1400, "category": "Culture", "description": "Explore Singapore's historic Chinatown with temples, clan houses, and some of the best hawker food on the island", "slot": "morning" },
+      { "name": "Universal Studios Singapore", "time": "10:00", "duration": "6 hours", "costPKR": 16800, "category": "Entertainment", "description": "Southeast Asia's only Universal Studios — seven themed zones, thrill rides, and live shows on Sentosa Island", "slot": "morning" },
+      { "name": "Singapore Zoo Morning Feeding", "time": "08:00", "duration": "3 hours", "costPKR": 8400, "category": "Nature", "description": "World-famous open-concept zoo where animals roam freely — iconic breakfast with orangutans experience", "slot": "morning" },
+      { "name": "Hawker Centre Food Tour", "time": "12:00", "duration": "2 hours", "costPKR": 1400, "category": "Food", "description": "Sample Singapore's UNESCO-recognized hawker culture — chicken rice, laksa, char kway teow, chilli crab at Maxwell or Lau Pa Sat", "slot": "afternoon" },
+      { "name": "Little India & Arab Street Walk", "time": "10:00", "duration": "2 hours", "costPKR": 0, "category": "Culture", "description": "Wander through colorful Little India and Arab Street, visiting Sri Veeramakaliamman Temple and Masjid Sultan Mosque", "slot": "morning" },
+      { "name": "Sentosa Beach & Cable Car", "time": "14:00", "duration": "3 hours", "costPKR": 5600, "category": "Relaxation", "description": "Relax on Palawan or Siloso Beach followed by a scenic cable car ride over the sea to Mount Faber", "slot": "afternoon" }
+    ],
+    "hotels": [
+      { "name": "Marina Bay Sands Hotel", "stars": 5, "pricePerNightPKR": 84000, "description": "The world-famous infinity pool hotel — an icon of Singapore's skyline" },
+      { "name": "Naumi Hotel Singapore", "stars": 4, "pricePerNightPKR": 28000, "description": "Boutique luxury hotel in the heart of the city near Raffles Place" },
+      { "name": "Wink Hostel", "stars": 3, "pricePerNightPKR": 8400, "description": "Award-winning capsule and private room hostel near Chinatown MRT" }
+    ],
+    "restaurants": [
+      { "name": "Lau Pa Sat Hawker Centre", "cuisine": "Singapore Hawker Food", "priceRange": "Budget", "rating": 4.6, "specialty": "Satay, chicken rice, char kway teow, laksa — Singapore classics", "location": "Shenton Way, CBD" },
+      { "name": "Jumbo Seafood Clarke Quay", "cuisine": "Singapore Chilli Crab", "priceRange": "Mid-range", "rating": 4.7, "specialty": "Iconic chilli crab and black pepper crab — Singapore's national dish", "location": "Clarke Quay Riverside" },
+      { "name": "Din Tai Fung Marina Bay", "cuisine": "Taiwanese Dim Sum", "priceRange": "Mid-range", "rating": 4.8, "specialty": "World-famous xiao long bao (soup dumplings) — Michelin Bib Gourmand", "location": "Marina Bay Link Mall" },
+      { "name": "Violet Oon Singapore", "cuisine": "Peranakan Cuisine", "priceRange": "Upscale", "rating": 4.7, "specialty": "Authentic Nonya laksa, beef rendang, and kueh desserts", "location": "National Gallery Singapore" }
+    ]
+  }
+]
